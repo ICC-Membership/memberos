@@ -76,10 +76,10 @@ export default function Strategy() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.92 0.012 75)" }}>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
             Strategy
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.008 65)" }}>
+          <p className="text-sm mt-0.5" style={{ color: "#6B6560" }}>
             Path to 200 members by December 31, 2026
           </p>
         </div>
@@ -88,7 +88,7 @@ export default function Strategy() {
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-xs px-4 py-2 rounded-md border transition-all duration-180"
-          style={{ color: "oklch(0.72 0.12 75)", borderColor: "oklch(0.72 0.12 75 / 0.3)", background: "oklch(0.72 0.12 75 / 0.05)" }}
+          style={{ color: "#C8102E", borderColor: "#C8102E", background: "#C8102E" }}
         >
           <ExternalLink size={12} />
           Ninety.io
@@ -96,10 +96,10 @@ export default function Strategy() {
       </div>
 
       {/* Annual milestone timeline */}
-      <div className="stat-card">
+      <div className="icc-card">
         <div className="flex items-center gap-2 mb-5">
-          <Target size={13} style={{ color: "oklch(0.72 0.12 75)" }} />
-          <h2 className="text-sm font-semibold tracking-wide uppercase" style={{ color: "oklch(0.72 0.12 75)" }}>
+          <Target size={13} style={{ color: "#C8102E" }} />
+          <h2 className="text-sm font-semibold tracking-wide uppercase" style={{ color: "#C8102E" }}>
             2026 Membership Milestones
           </h2>
         </div>
@@ -111,30 +111,30 @@ export default function Strategy() {
                 key={m.quarter}
                 className="p-4 rounded-lg border"
                 style={{
-                  background: m.status === "in-progress" ? "oklch(0.72 0.12 75 / 0.06)" : "oklch(0.14 0.008 55)",
-                  borderColor: m.status === "in-progress" ? "oklch(0.72 0.12 75 / 0.30)" : "oklch(0.20 0.008 55)",
+                  background: m.status === "in-progress" ? "#C8102E" : "#161616",
+                  borderColor: m.status === "in-progress" ? "#C8102E" : "#1E1E1E",
                 }}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold" style={{ color: m.status === "in-progress" ? "oklch(0.80 0.14 78)" : "oklch(0.55 0.008 65)" }}>
+                  <span className="text-xs font-semibold" style={{ color: m.status === "in-progress" ? "#E8E4DC" : "#6B6560" }}>
                     {m.quarter}
                   </span>
                   {m.status === "in-progress" && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 0.20)", color: "oklch(0.80 0.14 78)" }}>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#C8102E", color: "#E8E4DC" }}>
                       Active
                     </span>
                   )}
                 </div>
-                <p className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.92 0.012 75)" }}>
+                <p className="text-3xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
                   {m.target}
                 </p>
-                <p className="text-xs mb-3" style={{ color: "oklch(0.50 0.008 65)" }}>members by {m.deadline}</p>
+                <p className="text-xs mb-3" style={{ color: "#6B6560" }}>members by {m.deadline}</p>
                 {m.current && (
                   <>
-                    <div className="w-full h-1.5 rounded-full overflow-hidden mb-1" style={{ background: "oklch(0.22 0.008 55)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "linear-gradient(90deg, oklch(0.72 0.12 75), oklch(0.80 0.14 78))" }} />
+                    <div className="w-full h-1.5 rounded-full overflow-hidden mb-1" style={{ background: "#2A2A2A" }}>
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "linear-gradient(90deg, #C8102E, #E8E4DC)" }} />
                     </div>
-                    <p className="text-[10px]" style={{ color: "oklch(0.55 0.008 65)" }}>{m.current} / {m.target} ({pct}%)</p>
+                    <p className="text-[10px]" style={{ color: "#6B6560" }}>{m.current} / {m.target} ({pct}%)</p>
                   </>
                 )}
               </div>
@@ -145,38 +145,38 @@ export default function Strategy() {
 
       {/* Q1 Rocks with tactics */}
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold tracking-wide uppercase flex items-center gap-2" style={{ color: "oklch(0.72 0.12 75)" }}>
+        <h2 className="text-sm font-semibold tracking-wide uppercase flex items-center gap-2" style={{ color: "#C8102E" }}>
           <Zap size={13} />
           Q1 2026 Rocks + Execution Tactics
         </h2>
         {ROCKS.map((rock) => (
-          <div key={rock.id} className="stat-card">
+          <div key={rock.id} className="icc-card">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <span className="text-xs mr-2" style={{ color: "oklch(0.50 0.008 65)" }}>Rock {rock.id}</span>
-                <span className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.85 0.010 75)" }}>
+                <span className="text-xs mr-2" style={{ color: "#6B6560" }}>Rock {rock.id}</span>
+                <span className="text-sm font-semibold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
                   {rock.title}
                 </span>
               </div>
-              <span className="text-sm font-bold" style={{ color: rock.pct >= 80 ? "oklch(0.80 0.14 78)" : "oklch(0.65 0.010 70)" }}>
+              <span className="text-sm font-bold" style={{ color: rock.pct >= 80 ? "#E8E4DC" : "#A09A94" }}>
                 {rock.pct}%
               </span>
             </div>
-            <div className="w-full h-1.5 rounded-full overflow-hidden mb-4" style={{ background: "oklch(0.22 0.008 55)" }}>
+            <div className="w-full h-1.5 rounded-full overflow-hidden mb-4" style={{ background: "#2A2A2A" }}>
               <div
                 className="h-full rounded-full"
                 style={{
                   width: `${rock.pct}%`,
                   background: rock.pct >= 80
-                    ? "linear-gradient(90deg, oklch(0.72 0.12 75), oklch(0.80 0.14 78))"
-                    : "linear-gradient(90deg, oklch(0.55 0.08 35), oklch(0.65 0.10 45))",
+                    ? "linear-gradient(90deg, #C8102E, #E8E4DC)"
+                    : "linear-gradient(90deg, #8899CC, #8899CC)",
                 }}
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {rock.tactics.map((tactic, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "oklch(0.70 0.010 72)" }}>
-                  <div className="w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0" style={{ background: "oklch(0.72 0.12 75 / 0.60)" }} />
+                <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#A09A94" }}>
+                  <div className="w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0" style={{ background: "#C8102E" }} />
                   {tactic}
                 </div>
               ))}
@@ -186,28 +186,28 @@ export default function Strategy() {
       </div>
 
       {/* Acquisition channels */}
-      <div className="stat-card">
+      <div className="icc-card">
         <div className="flex items-center gap-2 mb-4">
-          <TrendingUp size={13} style={{ color: "oklch(0.72 0.12 75)" }} />
-          <h2 className="text-sm font-semibold tracking-wide uppercase" style={{ color: "oklch(0.72 0.12 75)" }}>
+          <TrendingUp size={13} style={{ color: "#C8102E" }} />
+          <h2 className="text-sm font-semibold tracking-wide uppercase" style={{ color: "#C8102E" }}>
             Acquisition Channels — 65 Members Needed
           </h2>
         </div>
         <div className="space-y-3">
           {ACQUISITION_CHANNELS.map((ch) => (
-            <div key={ch.channel} className="flex items-start gap-4 p-3 rounded-lg" style={{ background: "oklch(0.14 0.008 55)" }}>
+            <div key={ch.channel} className="flex items-start gap-4 p-3 rounded-lg" style={{ background: "#161616" }}>
               <div className="text-center flex-shrink-0 w-12">
-                <p className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.80 0.14 78)" }}>+{ch.target}</p>
-                <p className="text-[9px] uppercase tracking-wide" style={{ color: "oklch(0.45 0.006 60)" }}>target</p>
+                <p className="text-xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>+{ch.target}</p>
+                <p className="text-[9px] uppercase tracking-wide" style={{ color: "#3A3A3A" }}>target</p>
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-semibold" style={{ color: "oklch(0.85 0.010 75)" }}>{ch.channel}</span>
+                  <span className="text-xs font-semibold" style={{ color: "#E8E4DC" }}>{ch.channel}</span>
                   {ch.priority === "high" && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 0.15)", color: "oklch(0.80 0.14 78)" }}>Priority</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: "#C8102E", color: "#E8E4DC" }}>Priority</span>
                   )}
                 </div>
-                <p className="text-xs" style={{ color: "oklch(0.55 0.008 65)" }}>{ch.notes}</p>
+                <p className="text-xs" style={{ color: "#6B6560" }}>{ch.notes}</p>
               </div>
             </div>
           ))}
@@ -215,21 +215,21 @@ export default function Strategy() {
       </div>
 
       {/* Weekly rhythm */}
-      <div className="stat-card">
+      <div className="icc-card">
         <div className="flex items-center gap-2 mb-4">
-          <Users size={13} style={{ color: "oklch(0.72 0.12 75)" }} />
-          <h2 className="text-sm font-semibold tracking-wide uppercase" style={{ color: "oklch(0.72 0.12 75)" }}>
+          <Users size={13} style={{ color: "#C8102E" }} />
+          <h2 className="text-sm font-semibold tracking-wide uppercase" style={{ color: "#C8102E" }}>
             Weekly Execution Rhythm
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           {WEEKLY_ACTIONS.map((day) => (
-            <div key={day.day} className="p-3 rounded-lg" style={{ background: "oklch(0.14 0.008 55)" }}>
-              <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.80 0.14 78)" }}>{day.day}</p>
+            <div key={day.day} className="p-3 rounded-lg" style={{ background: "#161616" }}>
+              <p className="text-xs font-semibold mb-2" style={{ color: "#E8E4DC" }}>{day.day}</p>
               <div className="space-y-1.5">
                 {day.actions.map((action, i) => (
-                  <div key={i} className="flex items-start gap-1.5 text-[11px]" style={{ color: "oklch(0.60 0.010 70)" }}>
-                    <div className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: "oklch(0.72 0.12 75 / 0.50)" }} />
+                  <div key={i} className="flex items-start gap-1.5 text-[11px]" style={{ color: "#A09A94" }}>
+                    <div className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: "#C8102E" }} />
                     {action}
                   </div>
                 ))}

@@ -1,8 +1,10 @@
-/*
- * DashboardLayout — ICC Membership OS
- * Design: Refined Dark Luxury / Private Members Club
- * Fixed left sidebar (dark leather texture), main content area with top bar
- * Gold accent nav items, Playfair Display branding
+/**
+ * DashboardLayout — ICC Membership OS Wave 2
+ * Design: Industrial Cigar Co. brand identity
+ * - Near-black sidebar with ICC red active states (#C8102E)
+ * - Real ICC logo (hexagonal badge)
+ * - Bebas Neue for display, Inter for body
+ * - Red left-border on active nav items
  */
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -10,22 +12,27 @@ import {
   LayoutDashboard,
   Users,
   Trophy,
-  Archive,
+  Grid3X3,
   Mail,
-  Target,
+  TrendingUp,
   BookOpen,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
+  Zap,
   Menu,
 } from "lucide-react";
+
+const ICC_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663388846002/JxsvGXqZ8SL52kxCjJkGqG/icc-logo_4d91d6f7.png";
 
 const NAV_ITEMS = [
   { href: "/", icon: LayoutDashboard, label: "Command Center" },
   { href: "/members", icon: Users, label: "Members" },
   { href: "/power-rankings", icon: Trophy, label: "Power Rankings" },
-  { href: "/lockers", icon: Archive, label: "Locker Diagram" },
+  { href: "/lockers", icon: Grid3X3, label: "Locker Diagram" },
   { href: "/email", icon: Mail, label: "Email Hub" },
-  { href: "/strategy", icon: Target, label: "Strategy" },
+  { href: "/growth-engine", icon: Zap, label: "Growth Engine" },
+  { href: "/strategy", icon: TrendingUp, label: "Strategy" },
   { href: "/training", icon: BookOpen, label: "Training" },
 ];
 
@@ -39,11 +46,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden" style={{ background: "#0D0D0D" }}>
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/70 z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -51,57 +58,68 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed lg:relative z-50 h-full flex flex-col transition-all duration-300 ease-out
-          ${collapsed ? "w-[68px]" : "w-[240px]"}
+          fixed lg:relative z-50 h-full flex flex-col transition-all duration-200
+          ${collapsed ? "w-[56px]" : "w-[220px]"}
           ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
         style={{
-          background: `linear-gradient(180deg, oklch(0.07 0.010 52) 0%, oklch(0.09 0.008 55) 100%)`,
-          borderRight: "1px solid oklch(0.20 0.008 55)",
+          background: "#0A0A0A",
+          borderRight: "1px solid #1E1E1E",
         }}
       >
-        {/* Logo area */}
+        {/* Logo */}
         <div
-          className="flex items-center gap-3 px-4 py-5 border-b"
-          style={{ borderColor: "oklch(0.20 0.008 55)" }}
+          className="flex items-center gap-2.5 px-3 flex-shrink-0"
+          style={{ height: "52px", borderBottom: "1px solid #1E1E1E" }}
         >
-          <div
-            className="w-8 h-8 rounded-sm flex items-center justify-center flex-shrink-0"
-            style={{
-              background: "linear-gradient(135deg, oklch(0.72 0.12 75), oklch(0.80 0.14 78))",
-            }}
-          >
-            <span className="text-xs font-bold" style={{ color: "oklch(0.10 0.008 55)", fontFamily: "'Playfair Display', serif" }}>
-              ICC
-            </span>
-          </div>
+          <img
+            src={ICC_LOGO}
+            alt="ICC"
+            className="flex-shrink-0"
+            style={{ width: "30px", height: "30px", objectFit: "contain", filter: "invert(1)" }}
+          />
           {!collapsed && (
-            <div className="overflow-hidden">
-              <p
-                className="text-sm font-semibold leading-tight truncate"
-                style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.92 0.012 75)" }}
+            <div className="flex flex-col leading-none overflow-hidden">
+              <span
+                style={{
+                  fontFamily: "'Bebas Neue', 'Impact', sans-serif",
+                  fontSize: "1.05rem",
+                  letterSpacing: "0.05em",
+                  color: "#E8E4DC",
+                  lineHeight: 1.1,
+                }}
               >
-                Industrial Cigar
-              </p>
-              <p className="text-[10px] tracking-widest uppercase" style={{ color: "oklch(0.72 0.12 75)" }}>
-                Membership OS
-              </p>
+                INDUSTRIAL
+              </span>
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "0.58rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.14em",
+                  color: "#C8102E",
+                  textTransform: "uppercase",
+                  lineHeight: 1.3,
+                }}
+              >
+                MEMBERSHIP OS
+              </span>
             </div>
           )}
         </div>
 
-        {/* Nav items */}
-        <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
+        {/* Nav */}
+        <nav className="flex-1 py-3 px-2 flex flex-col gap-0.5 overflow-y-auto">
           {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
-            const isActive = location === href;
+            const isActive = href === "/" ? location === "/" : location.startsWith(href);
             return (
               <Link key={href} href={href}>
                 <div
                   className={`nav-item ${isActive ? "active" : ""}`}
-                  style={isActive ? { borderLeftWidth: "2px", paddingLeft: "10px" } : {}}
+                  style={collapsed ? { justifyContent: "center", padding: "0.5rem", borderLeft: "2px solid transparent" } : {}}
                   title={collapsed ? label : undefined}
                 >
-                  <Icon size={16} className="flex-shrink-0" />
+                  <Icon size={15} className="flex-shrink-0" />
                   {!collapsed && <span className="truncate">{label}</span>}
                 </div>
               </Link>
@@ -109,124 +127,169 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           })}
         </nav>
 
-        {/* Bottom: collapse toggle + user */}
+        {/* Quick links */}
+        {!collapsed && (
+          <div className="px-3 py-3" style={{ borderTop: "1px solid #1E1E1E" }}>
+            <p
+              style={{
+                fontSize: "0.58rem",
+                fontWeight: 700,
+                letterSpacing: "0.14em",
+                color: "#2E2E2E",
+                textTransform: "uppercase",
+                marginBottom: "0.5rem",
+              }}
+            >
+              Quick Links
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {[
+                { label: "Appstle", url: "https://admin.shopify.com/store/08bcdd/apps/appstle-memberships/dashboards/subscriptions" },
+                { label: "Ninety.io", url: "https://app.ninety.io" },
+                { label: "ICC Website", url: "https://industrialcigars.co" },
+                { label: "Typeform", url: "https://admin.typeform.com" },
+              ].map(({ label, url }) => (
+                <a
+                  key={label}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5"
+                  style={{ color: "#3A3A3A", fontSize: "0.72rem", transition: "color 0.15s" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "#C8102E")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "#3A3A3A")}
+                >
+                  <ExternalLink size={10} />
+                  {label}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* User + collapse */}
         <div
-          className="p-3 border-t space-y-2"
-          style={{ borderColor: "oklch(0.20 0.008 55)" }}
+          className="flex items-center justify-between px-3 py-3 flex-shrink-0"
+          style={{ borderTop: "1px solid #1E1E1E" }}
         >
           {!collapsed && (
-            <div className="flex items-center gap-2 px-2 py-2 rounded-md" style={{ background: "oklch(0.14 0.008 55)" }}>
+            <div className="flex items-center gap-2 min-w-0">
               <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{ background: "linear-gradient(135deg, oklch(0.72 0.12 75), oklch(0.80 0.14 78))", color: "oklch(0.10 0.008 55)" }}
+                className="flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                style={{ width: "26px", height: "26px", borderRadius: "50%", background: "#C8102E", fontFamily: "'Inter', sans-serif" }}
               >
                 AF
               </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-medium truncate" style={{ color: "oklch(0.85 0.010 75)" }}>Andrew Frakes</p>
-                <p className="text-[10px] truncate" style={{ color: "oklch(0.55 0.008 65)" }}>Head of Membership</p>
+              <div className="min-w-0">
+                <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "#E8E4DC", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  Andrew Frakes
+                </p>
+                <p style={{ fontSize: "0.62rem", color: "#3A3A3A" }}>Head of Membership</p>
               </div>
             </div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="w-full flex items-center justify-center py-1.5 rounded-md transition-colors duration-180"
-            style={{ color: "oklch(0.50 0.008 65)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "oklch(0.72 0.12 75)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "oklch(0.50 0.008 65)")}
+            className="flex items-center justify-center rounded flex-shrink-0"
+            style={{
+              width: "22px",
+              height: "22px",
+              background: "#1C1C1C",
+              border: "1px solid #2A2A2A",
+              color: "#3A3A3A",
+              transition: "all 0.15s",
+              marginLeft: collapsed ? "auto" : undefined,
+            }}
+            onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = "#C8102E")}
+            onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = "#3A3A3A")}
           >
-            {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            {collapsed ? <ChevronRight size={11} /> : <ChevronLeft size={11} />}
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
         <header
-          className="flex items-center gap-4 px-6 py-3 border-b flex-shrink-0"
-          style={{
-            background: "oklch(0.10 0.008 55)",
-            borderColor: "oklch(0.20 0.008 55)",
-          }}
+          className="flex items-center justify-between px-5 flex-shrink-0"
+          style={{ height: "48px", background: "#0D0D0D", borderBottom: "1px solid #1E1E1E" }}
         >
-          <button
-            className="lg:hidden p-1.5 rounded-md"
-            style={{ color: "oklch(0.65 0.010 70)" }}
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
-            <Menu size={18} />
-          </button>
-
-          {/* Rock progress bar */}
-          <div className="flex-1 flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-3">
-              <span className="text-xs font-medium tracking-wide uppercase" style={{ color: "oklch(0.55 0.008 65)" }}>
-                Q1 Rock
-              </span>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-32 h-1.5 rounded-full overflow-hidden"
-                  style={{ background: "oklch(0.22 0.008 55)" }}
-                >
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: "90%",
-                      background: "linear-gradient(90deg, oklch(0.72 0.12 75), oklch(0.80 0.14 78))",
-                    }}
-                  />
-                </div>
-                <span className="text-xs font-semibold" style={{ color: "oklch(0.80 0.14 78)" }}>
-                  135 / 150
-                </span>
-              </div>
-            </div>
-
-            <div className="hidden lg:flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <button
+              className="lg:hidden"
+              style={{ color: "#4A4A4A" }}
+              onClick={() => setMobileOpen(!mobileOpen)}
+            >
+              <Menu size={18} />
+            </button>
+            <span
+              style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.14em", color: "#C8102E", textTransform: "uppercase" }}
+            >
+              Q1 ROCK
+            </span>
+            <div className="hidden md:flex items-center gap-2">
               <div
-                className="w-2 h-2 rounded-full animate-pulse"
-                style={{ background: "oklch(0.72 0.12 75)" }}
-              />
-              <span className="text-xs" style={{ color: "oklch(0.55 0.008 65)" }}>
-                15 members to April 1st goal
-              </span>
+                className="rounded-full overflow-hidden"
+                style={{ width: "110px", height: "3px", background: "#1E1E1E" }}
+              >
+                <div className="h-full rounded-full" style={{ width: "90%", background: "#C8102E" }} />
+              </div>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#E8E4DC" }}>135 / 150</span>
             </div>
+            <span className="hidden lg:block" style={{ fontSize: "0.68rem", color: "#2E2E2E" }}>
+              · 15 members to April 1st goal
+            </span>
           </div>
 
-          {/* Quick links */}
           <div className="flex items-center gap-2">
             <a
               href="https://admin.shopify.com/store/08bcdd/apps/appstle-memberships/dashboards/subscriptions"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs px-3 py-1.5 rounded-md border transition-all duration-180"
+              className="flex items-center gap-1.5"
               style={{
-                color: "oklch(0.72 0.12 75)",
-                borderColor: "oklch(0.72 0.12 75 / 0.3)",
-                background: "oklch(0.72 0.12 75 / 0.05)",
+                fontSize: "0.7rem",
+                fontWeight: 500,
+                color: "#C8102E",
+                padding: "0.28rem 0.65rem",
+                border: "1px solid rgba(200,16,46,0.30)",
+                borderRadius: "0.25rem",
+                background: "rgba(200,16,46,0.06)",
+                transition: "all 0.15s",
               }}
+              onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.background = "rgba(200,16,46,0.14)")}
+              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.background = "rgba(200,16,46,0.06)")}
             >
+              <ExternalLink size={10} />
               Appstle
             </a>
             <a
               href="https://app.ninety.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs px-3 py-1.5 rounded-md border transition-all duration-180"
+              className="flex items-center gap-1.5"
               style={{
-                color: "oklch(0.65 0.010 70)",
-                borderColor: "oklch(0.25 0.008 55)",
+                fontSize: "0.7rem",
+                fontWeight: 500,
+                color: "#4A4A4A",
+                padding: "0.28rem 0.65rem",
+                border: "1px solid #2A2A2A",
+                borderRadius: "0.25rem",
                 background: "transparent",
+                transition: "all 0.15s",
               }}
+              onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = "#E8E4DC")}
+              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = "#4A4A4A")}
             >
+              <ExternalLink size={10} />
               Ninety.io
             </a>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto" style={{ background: "#0D0D0D" }}>
           {children}
         </main>
       </div>

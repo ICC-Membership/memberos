@@ -1,10 +1,16 @@
 /*
- * Members — ICC Membership OS
- * Full member list with tier filters, search, status badges, renewal dates
- * Links to Appstle for live data
+ * Members — ICC Membership OS Wave 2
+ * ICC brand: near-black, #C8102E red, Bebas Neue headings
  */
 import { useState } from "react";
 import { Search, ExternalLink, Filter } from "lucide-react";
+
+const ICC_RED = "#C8102E";
+const SURFACE = "#1C1C1C";
+const BORDER = "#2A2A2A";
+const TEXT = "#E8E4DC";
+const TEXT_DIM = "#6B6560";
+const MUTED = "#3A3A3A";
 
 const MEMBERS = [
   { id: "#33050165568", name: "Matt Miller", email: "utpilot@gmail.com", tier: "Visionary", status: "Active", joined: "Mar 02, 2026", renewal: "Apr 02, 2026", locker: false },
@@ -32,14 +38,14 @@ function TierBadge({ tier }: { tier: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, { bg: string; text: string }> = {
-    Active: { bg: "oklch(0.35 0.10 145 / 0.20)", text: "oklch(0.65 0.15 145)" },
-    Paused: { bg: "oklch(0.55 0.10 75 / 0.20)", text: "oklch(0.72 0.12 75)" },
-    Cancelled: { bg: "oklch(0.55 0.15 25 / 0.20)", text: "oklch(0.70 0.15 30)" },
+    Active: { bg: "rgba(34,197,94,0.12)", text: "#22C55E" },
+    Paused: { bg: "rgba(196,163,90,0.15)", text: "#C4A35A" },
+    Cancelled: { bg: "rgba(200,16,46,0.12)", text: ICC_RED },
   };
   const c = colors[status] || colors.Active;
   return (
-    <span className="text-xs px-2 py-0.5 rounded-sm font-medium" style={{ background: c.bg, color: c.text }}>
-      {status}
+    <span style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", padding: "0.15rem 0.5rem", borderRadius: "0.2rem", background: c.bg, color: c.text }}>
+      {status.toUpperCase()}
     </span>
   );
 }
@@ -57,14 +63,14 @@ export default function Members() {
   });
 
   return (
-    <div className="space-y-5">
+    <div className="p-6 space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.92 0.012 75)" }}>
-            Members
+          <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.75rem", letterSpacing: "0.04em", color: TEXT, lineHeight: 1 }}>
+            MEMBERS
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.008 65)" }}>
+          <p style={{ fontSize: "0.78rem", marginTop: "0.25rem", color: TEXT_DIM }}>
             135 active members · Showing {filtered.length} results
           </p>
         </div>
@@ -72,8 +78,8 @@ export default function Members() {
           href="https://admin.shopify.com/store/08bcdd/apps/appstle-memberships/dashboards/subscriptions"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-xs px-4 py-2 rounded-md font-medium transition-all duration-180"
-          style={{ background: "linear-gradient(135deg, oklch(0.72 0.12 75), oklch(0.80 0.14 78))", color: "oklch(0.10 0.008 55)" }}
+          className="flex items-center gap-2"
+          style={{ background: ICC_RED, color: "white", fontSize: "0.75rem", fontWeight: 600, padding: "0.5rem 1rem", borderRadius: "0.25rem" }}
         >
           <ExternalLink size={12} />
           Open Appstle
@@ -83,31 +89,27 @@ export default function Members() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "oklch(0.50 0.008 65)" }} />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: MUTED }} />
           <input
             type="text"
             placeholder="Search by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-md border outline-none transition-all duration-180"
-            style={{
-              background: "oklch(0.14 0.008 55)",
-              border: "1px solid oklch(0.22 0.008 55)",
-              color: "oklch(0.85 0.010 75)",
-            }}
+            className="w-full pl-9 pr-3 py-2 text-xs rounded outline-none"
+            style={{ background: "#161616", border: `1px solid ${BORDER}`, color: TEXT }}
           />
         </div>
         <div className="flex items-center gap-2">
-          <Filter size={12} style={{ color: "oklch(0.50 0.008 65)" }} />
+          <Filter size={12} style={{ color: MUTED }} />
           {["All", "APEX", "Atabey", "Visionary"].map((t) => (
             <button
               key={t}
               onClick={() => setTierFilter(t)}
-              className="text-xs px-3 py-2 rounded-md border transition-all duration-180"
+              className="text-xs px-3 py-1.5 rounded border transition-all"
               style={{
-                background: tierFilter === t ? "oklch(0.72 0.12 75 / 0.15)" : "transparent",
-                borderColor: tierFilter === t ? "oklch(0.72 0.12 75 / 0.5)" : "oklch(0.22 0.008 55)",
-                color: tierFilter === t ? "oklch(0.80 0.14 78)" : "oklch(0.55 0.008 65)",
+                background: tierFilter === t ? "rgba(200,16,46,0.15)" : "transparent",
+                borderColor: tierFilter === t ? "rgba(200,16,46,0.50)" : BORDER,
+                color: tierFilter === t ? ICC_RED : TEXT_DIM,
               }}
             >
               {t}
@@ -119,11 +121,11 @@ export default function Members() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className="text-xs px-3 py-2 rounded-md border transition-all duration-180"
+              className="text-xs px-3 py-1.5 rounded border transition-all"
               style={{
-                background: statusFilter === s ? "oklch(0.18 0.008 55)" : "transparent",
-                borderColor: statusFilter === s ? "oklch(0.35 0.008 55)" : "oklch(0.22 0.008 55)",
-                color: statusFilter === s ? "oklch(0.85 0.010 75)" : "oklch(0.50 0.008 65)",
+                background: statusFilter === s ? "#1C1C1C" : "transparent",
+                borderColor: statusFilter === s ? "#3A3A3A" : BORDER,
+                color: statusFilter === s ? TEXT : TEXT_DIM,
               }}
             >
               {s}
@@ -133,12 +135,12 @@ export default function Members() {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg overflow-hidden border" style={{ borderColor: "oklch(0.22 0.008 55)" }}>
+      <div className="rounded overflow-hidden" style={{ border: `1px solid ${BORDER}` }}>
         <table className="w-full text-xs">
           <thead>
-            <tr style={{ background: "oklch(0.13 0.008 55)", borderBottom: "1px solid oklch(0.22 0.008 55)" }}>
+            <tr style={{ background: "#161616", borderBottom: `1px solid ${BORDER}` }}>
               {["Member", "Tier", "Status", "Joined", "Next Renewal", "Locker", ""].map((h) => (
-                <th key={h} className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>
+                <th key={h} className="text-left px-4 py-3" style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase", color: MUTED }}>
                   {h}
                 </th>
               ))}
@@ -148,50 +150,49 @@ export default function Members() {
             {filtered.map((m, i) => (
               <tr
                 key={m.id}
-                className="border-b transition-colors duration-150"
+                className="border-b transition-colors"
                 style={{
-                  borderColor: "oklch(0.18 0.006 55)",
-                  background: i % 2 === 0 ? "oklch(0.12 0.008 55)" : "oklch(0.10 0.008 55)",
+                  borderColor: "#1E1E1E",
+                  background: i % 2 === 0 ? "#1C1C1C" : "#161616",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(0.16 0.008 55)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? "oklch(0.12 0.008 55)" : "oklch(0.10 0.008 55)")}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#222222")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? "#1C1C1C" : "#161616")}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div
                       className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      style={{ background: "oklch(0.20 0.008 55)", color: "oklch(0.72 0.12 75)" }}
+                      style={{ background: "#1E1E1E", color: ICC_RED, border: `1px solid #2A2A2A` }}
                     >
                       {m.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                     </div>
                     <div>
-                      <p className="font-medium" style={{ color: "oklch(0.85 0.010 75)" }}>{m.name}</p>
-                      <p style={{ color: "oklch(0.45 0.006 60)" }}>{m.email}</p>
+                      <p style={{ fontWeight: 600, color: TEXT }}>{m.name}</p>
+                      <p style={{ color: MUTED, fontSize: "0.7rem" }}>{m.email}</p>
                     </div>
                   </div>
                 </td>
                 <td className="px-4 py-3"><TierBadge tier={m.tier} /></td>
                 <td className="px-4 py-3"><StatusBadge status={m.status} /></td>
-                <td className="px-4 py-3" style={{ color: "oklch(0.55 0.008 65)" }}>{m.joined}</td>
+                <td className="px-4 py-3" style={{ color: TEXT_DIM }}>{m.joined}</td>
                 <td className="px-4 py-3">
-                  <span style={{ color: "oklch(0.72 0.12 75)" }}>{m.renewal}</span>
+                  <span style={{ color: "#C4A35A", fontWeight: 600 }}>{m.renewal}</span>
                 </td>
                 <td className="px-4 py-3">
                   {m.locker ? (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 0.15)", color: "oklch(0.72 0.12 75)" }}>Yes</span>
+                    <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "0.1rem 0.4rem", borderRadius: "0.2rem", background: "rgba(196,163,90,0.12)", color: "#C4A35A" }}>YES</span>
                   ) : (
-                    <span style={{ color: "oklch(0.35 0.006 55)" }}>—</span>
+                    <span style={{ color: MUTED }}>—</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
                   <a
-                    href={`https://admin.shopify.com/store/08bcdd/apps/appstle-memberships/dashboards/subscriptions`}
+                    href="https://admin.shopify.com/store/08bcdd/apps/appstle-memberships/dashboards/subscriptions"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="transition-colors duration-150"
-                    style={{ color: "oklch(0.50 0.008 65)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "oklch(0.72 0.12 75)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "oklch(0.50 0.008 65)")}
+                    style={{ color: MUTED, transition: "color 0.15s" }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = ICC_RED)}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = MUTED)}
                   >
                     <ExternalLink size={12} />
                   </a>
@@ -202,8 +203,8 @@ export default function Members() {
         </table>
       </div>
 
-      <p className="text-xs text-center" style={{ color: "oklch(0.40 0.006 55)" }}>
-        Showing sample data. Connect to Appstle for live member records.
+      <p style={{ fontSize: "0.7rem", textAlign: "center", color: MUTED }}>
+        Showing sample data · Connect to Appstle for live member records
       </p>
     </div>
   );

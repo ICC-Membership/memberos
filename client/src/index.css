@@ -4,10 +4,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * ICC Membership OS — Global Theme
- * Design: Refined Dark Luxury / Private Members Club
- * Deep warm-dark backgrounds, gold accents, Playfair Display headings
- * Color palette: Deep tobacco browns, burnished gold, cool slate accents
+ * ICC Membership OS — Wave 2 Brand Identity
+ * Design: Industrial Cigar Co. — Bold, Red & Black, Industrial-Premium
+ * Logo: Hexagonal badge, bold condensed type, red "CIGAR Co" accent
+ * Colors: Near-black background, bold ICC red (#C8102E), warm white text
+ * Typography: Bebas Neue (display), Inter (body)
+ * Voice: "Welcome Home" — community-first, warm under the edge
  */
 
 @theme inline {
@@ -50,76 +52,88 @@
 }
 
 :root {
-  --radius: 0.5rem;
-  /* Deep tobacco dark background */
-  --background: oklch(0.10 0.008 55);
-  --foreground: oklch(0.88 0.010 72);
-  --card: oklch(0.13 0.008 55);
-  --card-foreground: oklch(0.88 0.010 72);
-  --popover: oklch(0.14 0.008 55);
-  --popover-foreground: oklch(0.88 0.010 72);
-  /* Gold primary */
-  --primary: oklch(0.72 0.12 75);
-  --primary-foreground: oklch(0.10 0.008 55);
-  --secondary: oklch(0.18 0.008 55);
-  --secondary-foreground: oklch(0.75 0.010 72);
-  --muted: oklch(0.16 0.008 55);
-  --muted-foreground: oklch(0.52 0.008 65);
-  --accent: oklch(0.20 0.008 55);
-  --accent-foreground: oklch(0.88 0.010 72);
-  --destructive: oklch(0.60 0.18 25);
+  --radius: 0.375rem;
+
+  /* ICC Brand Colors */
+  --icc-red: #C8102E;
+  --icc-red-dark: #9E0B23;
+  --icc-black: #0D0D0D;
+  --icc-charcoal: #161616;
+  --icc-surface: #1C1C1C;
+  --icc-border: #2A2A2A;
+  --icc-text: #E8E4DC;
+  --icc-muted: #6B6560;
+  --icc-gold: #C4A35A;
+
+  /* Semantic tokens mapped to ICC brand */
+  --background: oklch(0.08 0.002 50);
+  --foreground: oklch(0.90 0.008 72);
+  --card: oklch(0.11 0.003 50);
+  --card-foreground: oklch(0.90 0.008 72);
+  --popover: oklch(0.12 0.003 50);
+  --popover-foreground: oklch(0.90 0.008 72);
+  /* ICC Red as primary */
+  --primary: oklch(0.45 0.20 25);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.15 0.003 50);
+  --secondary-foreground: oklch(0.75 0.008 72);
+  --muted: oklch(0.14 0.003 50);
+  --muted-foreground: oklch(0.48 0.008 65);
+  --accent: oklch(0.16 0.003 50);
+  --accent-foreground: oklch(0.90 0.008 72);
+  --destructive: oklch(0.50 0.20 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.22 0.008 55);
-  --input: oklch(0.22 0.008 55);
-  --ring: oklch(0.72 0.12 75);
-  --chart-1: oklch(0.72 0.12 75);
-  --chart-2: oklch(0.60 0.10 55);
+  --border: oklch(0.20 0.003 50);
+  --input: oklch(0.20 0.003 50);
+  --ring: oklch(0.45 0.20 25);
+  --chart-1: oklch(0.45 0.20 25);
+  --chart-2: oklch(0.72 0.12 75);
   --chart-3: oklch(0.55 0.08 250);
   --chart-4: oklch(0.65 0.12 145);
-  --chart-5: oklch(0.60 0.15 25);
-  --sidebar: oklch(0.09 0.010 52);
-  --sidebar-foreground: oklch(0.80 0.010 72);
-  --sidebar-primary: oklch(0.72 0.12 75);
-  --sidebar-primary-foreground: oklch(0.10 0.008 55);
-  --sidebar-accent: oklch(0.16 0.008 55);
-  --sidebar-accent-foreground: oklch(0.85 0.010 75);
-  --sidebar-border: oklch(0.20 0.008 55);
-  --sidebar-ring: oklch(0.72 0.12 75);
+  --chart-5: oklch(0.60 0.10 55);
+  --sidebar: oklch(0.07 0.003 50);
+  --sidebar-foreground: oklch(0.80 0.008 72);
+  --sidebar-primary: oklch(0.45 0.20 25);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.14 0.003 50);
+  --sidebar-accent-foreground: oklch(0.85 0.008 72);
+  --sidebar-border: oklch(0.18 0.003 50);
+  --sidebar-ring: oklch(0.45 0.20 25);
 }
 
 .dark {
-  --background: oklch(0.10 0.008 55);
-  --foreground: oklch(0.88 0.010 72);
-  --card: oklch(0.13 0.008 55);
-  --card-foreground: oklch(0.88 0.010 72);
-  --popover: oklch(0.14 0.008 55);
-  --popover-foreground: oklch(0.88 0.010 72);
-  --primary: oklch(0.72 0.12 75);
-  --primary-foreground: oklch(0.10 0.008 55);
-  --secondary: oklch(0.18 0.008 55);
-  --secondary-foreground: oklch(0.75 0.010 72);
-  --muted: oklch(0.16 0.008 55);
-  --muted-foreground: oklch(0.52 0.008 65);
-  --accent: oklch(0.20 0.008 55);
-  --accent-foreground: oklch(0.88 0.010 72);
-  --destructive: oklch(0.60 0.18 25);
+  --background: oklch(0.08 0.002 50);
+  --foreground: oklch(0.90 0.008 72);
+  --card: oklch(0.11 0.003 50);
+  --card-foreground: oklch(0.90 0.008 72);
+  --popover: oklch(0.12 0.003 50);
+  --popover-foreground: oklch(0.90 0.008 72);
+  --primary: oklch(0.45 0.20 25);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.15 0.003 50);
+  --secondary-foreground: oklch(0.75 0.008 72);
+  --muted: oklch(0.14 0.003 50);
+  --muted-foreground: oklch(0.48 0.008 65);
+  --accent: oklch(0.16 0.003 50);
+  --accent-foreground: oklch(0.90 0.008 72);
+  --destructive: oklch(0.50 0.20 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.22 0.008 55);
-  --input: oklch(0.22 0.008 55);
-  --ring: oklch(0.72 0.12 75);
-  --chart-1: oklch(0.72 0.12 75);
-  --chart-2: oklch(0.60 0.10 55);
+  --border: oklch(0.20 0.003 50);
+  --input: oklch(0.20 0.003 50);
+  --ring: oklch(0.45 0.20 25);
+  --chart-1: oklch(0.45 0.20 25);
+  --chart-2: oklch(0.72 0.12 75);
   --chart-3: oklch(0.55 0.08 250);
   --chart-4: oklch(0.65 0.12 145);
-  --chart-5: oklch(0.60 0.15 25);
-  --sidebar: oklch(0.09 0.010 52);
-  --sidebar-foreground: oklch(0.80 0.010 72);
-  --sidebar-primary: oklch(0.72 0.12 75);
-  --sidebar-primary-foreground: oklch(0.10 0.008 55);
-  --sidebar-accent: oklch(0.16 0.008 55);
-  --sidebar-accent-foreground: oklch(0.85 0.010 75);
-  --sidebar-border: oklch(0.20 0.008 55);
-  --sidebar-ring: oklch(0.72 0.12 75);
+  --chart-5: oklch(0.60 0.10 55);
+  --sidebar: oklch(0.07 0.003 50);
+  --sidebar-foreground: oklch(0.80 0.008 72);
+  --sidebar-primary: oklch(0.45 0.20 25);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.14 0.003 50);
+  --sidebar-accent-foreground: oklch(0.85 0.008 72);
+  --sidebar-border: oklch(0.18 0.003 50);
+  --sidebar-ring: oklch(0.45 0.20 25);
 }
 
 @layer base {
@@ -131,14 +145,19 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 14px;
     -webkit-font-smoothing: antialiased;
+    background-color: #0D0D0D;
   }
-  h1, h2, h3 {
-    font-family: 'Playfair Display', Georgia, serif;
+  h1, h2 {
+    font-family: 'Bebas Neue', 'Impact', sans-serif;
+    letter-spacing: 0.04em;
+  }
+  h3, h4 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [type="button"]:not(:disabled),
-  [type="submit"]:not(:disabled),
   a[href],
   select:not(:disabled) {
     @apply cursor-pointer;
@@ -160,27 +179,58 @@
   }
 
   @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
+    .container { padding-left: 1.5rem; padding-right: 1.5rem; }
   }
-
   @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-      max-width: 1280px;
-    }
+    .container { padding-left: 2rem; padding-right: 2rem; max-width: 1280px; }
   }
 
-  /* Stat card — main content card */
-  .stat-card {
-    background: oklch(0.13 0.008 55);
-    border: 1px solid oklch(0.22 0.008 55);
-    border-radius: 0.625rem;
-    padding: 1.25rem;
-    transition: border-color 0.18s ease;
+  /* ICC Red accent button */
+  .btn-icc {
+    background: #C8102E;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    border: none;
+    transition: background 0.15s ease;
+    cursor: pointer;
+  }
+  .btn-icc:hover { background: #9E0B23; }
+
+  /* Ghost button */
+  .btn-ghost {
+    background: transparent;
+    color: oklch(0.55 0.003 50);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid oklch(0.22 0.003 50);
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .btn-ghost:hover {
+    color: oklch(0.90 0.008 72);
+    border-color: oklch(0.35 0.003 50);
+    background: oklch(0.14 0.003 50);
+  }
+
+  /* Card surface */
+  .icc-card {
+    background: #1C1C1C;
+    border: 1px solid #2A2A2A;
+    border-radius: 0.375rem;
+  }
+
+  /* Red left-border accent card */
+  .icc-card-accent {
+    background: #1C1C1C;
+    border: 1px solid #2A2A2A;
+    border-left: 3px solid #C8102E;
+    border-radius: 0.375rem;
   }
 
   /* Nav item */
@@ -188,23 +238,24 @@
     display: flex;
     align-items: center;
     gap: 0.625rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.25rem;
     font-size: 0.8125rem;
     font-weight: 500;
-    color: oklch(0.52 0.008 65);
+    color: oklch(0.48 0.008 65);
     border-left: 2px solid transparent;
     transition: all 0.15s ease;
     text-decoration: none;
+    letter-spacing: 0.01em;
   }
   .nav-item:hover {
-    color: oklch(0.80 0.010 72);
-    background: oklch(0.16 0.008 55);
+    color: oklch(0.85 0.008 72);
+    background: #1C1C1C;
   }
   .nav-item.active {
-    color: oklch(0.80 0.14 78);
-    background: oklch(0.72 0.12 75 / 0.12);
-    border-left-color: oklch(0.72 0.12 75);
+    color: #E8E4DC;
+    background: rgba(200, 16, 46, 0.12);
+    border-left-color: #C8102E;
   }
 
   /* Tier badges */
@@ -213,55 +264,79 @@
     align-items: center;
     font-size: 0.625rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.10em;
     text-transform: uppercase;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    background: linear-gradient(135deg, oklch(0.72 0.12 75 / 0.25), oklch(0.80 0.14 78 / 0.15));
-    color: oklch(0.80 0.14 78);
-    border: 1px solid oklch(0.72 0.12 75 / 0.50);
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.2rem;
+    background: rgba(200, 16, 46, 0.18);
+    color: #E8453C;
+    border: 1px solid rgba(200, 16, 46, 0.45);
   }
   .tier-badge-atabey {
     display: inline-flex;
     align-items: center;
     font-size: 0.625rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.10em;
     text-transform: uppercase;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    background: oklch(0.55 0.08 55 / 0.20);
-    color: oklch(0.72 0.08 60);
-    border: 1px solid oklch(0.55 0.08 55 / 0.45);
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.2rem;
+    background: rgba(196, 163, 90, 0.15);
+    color: #C4A35A;
+    border: 1px solid rgba(196, 163, 90, 0.40);
   }
   .tier-badge-visionary {
     display: inline-flex;
     align-items: center;
     font-size: 0.625rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.10em;
     text-transform: uppercase;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    background: oklch(0.45 0.04 250 / 0.20);
-    color: oklch(0.65 0.06 255);
-    border: 1px solid oklch(0.50 0.05 255 / 0.40);
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.2rem;
+    background: rgba(100, 116, 180, 0.15);
+    color: #8899CC;
+    border: 1px solid rgba(100, 116, 180, 0.35);
   }
 
-  /* Gold divider rule */
-  .gold-rule {
-    border-top: 1px solid oklch(0.72 0.12 75 / 0.20);
-  }
+  /* Status dot */
+  .status-dot-active { width: 6px; height: 6px; border-radius: 50%; background: #22C55E; display: inline-block; }
+  .status-dot-at-risk { width: 6px; height: 6px; border-radius: 50%; background: #C8102E; display: inline-block; }
+  .status-dot-pending { width: 6px; height: 6px; border-radius: 50%; background: #C4A35A; display: inline-block; }
 
   /* Locker cell */
   .locker-cell {
-    border-radius: 0.375rem;
+    border-radius: 0.25rem;
     border: 1px solid;
     cursor: pointer;
     transition: all 0.15s ease;
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 600;
   }
   .locker-cell:hover {
     transform: translateY(-1px);
-    filter: brightness(1.15);
+    filter: brightness(1.2);
+    z-index: 10;
   }
+
+  /* Hexagon shape for logo area */
+  .hex-badge {
+    clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  }
+
+  /* Red rule */
+  .red-rule {
+    border-top: 1px solid rgba(200, 16, 46, 0.30);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #0D0D0D; }
+  ::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #C8102E; }
 }

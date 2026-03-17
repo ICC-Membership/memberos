@@ -102,18 +102,18 @@ function CollapsibleSection({ title, icon: Icon, children, defaultOpen = false }
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="stat-card">
+    <div className="icc-card">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between"
       >
         <div className="flex items-center gap-2">
-          <Icon size={13} style={{ color: "oklch(0.72 0.12 75)" }} />
-          <h2 className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.85 0.010 75)" }}>
+          <Icon size={13} style={{ color: "#C8102E" }} />
+          <h2 className="text-sm font-semibold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
             {title}
           </h2>
         </div>
-        {open ? <ChevronUp size={14} style={{ color: "oklch(0.50 0.008 65)" }} /> : <ChevronDown size={14} style={{ color: "oklch(0.50 0.008 65)" }} />}
+        {open ? <ChevronUp size={14} style={{ color: "#6B6560" }} /> : <ChevronDown size={14} style={{ color: "#6B6560" }} />}
       </button>
       {open && <div className="mt-4 gold-rule pt-4">{children}</div>}
     </div>
@@ -126,10 +126,10 @@ export default function Training() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.92 0.012 75)" }}>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
             Training
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.008 65)" }}>
+          <p className="text-sm mt-0.5" style={{ color: "#6B6560" }}>
             Staff training materials, commission plan, and membership benefits
           </p>
         </div>
@@ -138,7 +138,7 @@ export default function Training() {
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-xs px-4 py-2 rounded-md border transition-all duration-180"
-          style={{ color: "oklch(0.72 0.12 75)", borderColor: "oklch(0.72 0.12 75 / 0.3)", background: "oklch(0.72 0.12 75 / 0.05)" }}
+          style={{ color: "#C8102E", borderColor: "#C8102E", background: "#C8102E" }}
         >
           <ExternalLink size={12} />
           Google Drive
@@ -148,30 +148,30 @@ export default function Training() {
       {/* Commission Plan */}
       <CollapsibleSection title="2026 Commission & Referral Plan" icon={Award} defaultOpen={true}>
         <div className="space-y-4">
-          <div className="p-3 rounded-lg" style={{ background: "oklch(0.72 0.12 75 / 0.08)", border: "1px solid oklch(0.72 0.12 75 / 0.25)" }}>
-            <p className="text-xs font-semibold mb-1" style={{ color: "oklch(0.80 0.14 78)" }}>How It Works</p>
-            <p className="text-xs leading-relaxed" style={{ color: "oklch(0.70 0.010 72)" }}>
+          <div className="p-3 rounded-lg" style={{ background: "#C8102E", border: "1px solid #C8102E" }}>
+            <p className="text-xs font-semibold mb-1" style={{ color: "#E8E4DC" }}>How It Works</p>
+            <p className="text-xs leading-relaxed" style={{ color: "#A09A94" }}>
               Staff earn commissions by referring new members using their unique referral code, or by completing the full sales process (tour → present → close). Attribution is tracked by the Head of Membership. Commissions are paid at the end of each quarter. A 90-day clawback applies if a member cancels within 90 days of joining.
             </p>
           </div>
 
-          <div className="rounded-lg overflow-hidden border" style={{ borderColor: "oklch(0.22 0.008 55)" }}>
+          <div className="rounded-lg overflow-hidden border" style={{ borderColor: "#2A2A2A" }}>
             <table className="w-full text-xs">
               <thead>
-                <tr style={{ background: "oklch(0.13 0.008 55)" }}>
-                  <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>Goal</th>
-                  <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.80 0.14 78)" }}>1st Place</th>
-                  <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.65 0.08 60)" }}>Runner Up</th>
-                  <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.60 0.06 250)" }}>3rd Place</th>
+                <tr style={{ background: "#141414" }}>
+                  <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>Goal</th>
+                  <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#E8E4DC" }}>1st Place</th>
+                  <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#C4A35A" }}>Runner Up</th>
+                  <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#8899CC" }}>3rd Place</th>
                 </tr>
               </thead>
               <tbody>
                 {COMMISSION_TIERS.map((tier, i) => (
-                  <tr key={i} className="border-t" style={{ borderColor: "oklch(0.18 0.006 55)", background: i % 2 === 0 ? "oklch(0.12 0.008 55)" : "oklch(0.10 0.008 55)" }}>
-                    <td className="px-4 py-3" style={{ color: "oklch(0.75 0.010 72)" }}>{tier.goal}</td>
-                    <td className="px-4 py-3 text-center font-bold" style={{ color: "oklch(0.80 0.14 78)" }}>{tier.first}</td>
-                    <td className="px-4 py-3 text-center font-semibold" style={{ color: "oklch(0.65 0.08 60)" }}>{tier.second}</td>
-                    <td className="px-4 py-3 text-center" style={{ color: "oklch(0.60 0.06 250)" }}>{tier.third}</td>
+                  <tr key={i} className="border-t" style={{ borderColor: "#1E1E1E", background: i % 2 === 0 ? "#1C1C1C" : "#161616" }}>
+                    <td className="px-4 py-3" style={{ color: "#A09A94" }}>{tier.goal}</td>
+                    <td className="px-4 py-3 text-center font-bold" style={{ color: "#E8E4DC" }}>{tier.first}</td>
+                    <td className="px-4 py-3 text-center font-semibold" style={{ color: "#C4A35A" }}>{tier.second}</td>
+                    <td className="px-4 py-3 text-center" style={{ color: "#8899CC" }}>{tier.third}</td>
                   </tr>
                 ))}
               </tbody>
@@ -184,24 +184,24 @@ export default function Training() {
       <CollapsibleSection title="Sales Script — 5-Step Membership Presentation" icon={FileText} defaultOpen={true}>
         <div className="space-y-3">
           {SALES_STEPS.map((step) => (
-            <div key={step.step} className="p-4 rounded-lg" style={{ background: "oklch(0.14 0.008 55)" }}>
+            <div key={step.step} className="p-4 rounded-lg" style={{ background: "#161616" }}>
               <div className="flex items-center gap-2 mb-2">
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                  style={{ background: "linear-gradient(135deg, oklch(0.72 0.12 75), oklch(0.80 0.14 78))", color: "oklch(0.10 0.008 55)" }}
+                  style={{ background: "linear-gradient(135deg, #C8102E, #E8E4DC)", color: "#161616" }}
                 >
                   {step.step}
                 </div>
-                <span className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.85 0.010 75)" }}>
+                <span className="text-sm font-semibold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
                   {step.title}
                 </span>
               </div>
               <div className="ml-8">
-                <p className="text-xs italic mb-2 leading-relaxed" style={{ color: "oklch(0.70 0.010 72)", borderLeft: "2px solid oklch(0.72 0.12 75 / 0.40)", paddingLeft: "12px" }}>
+                <p className="text-xs italic mb-2 leading-relaxed" style={{ color: "#A09A94", borderLeft: "2px solid #C8102E", paddingLeft: "12px" }}>
                   "{step.script}"
                 </p>
-                <p className="text-xs" style={{ color: "oklch(0.55 0.008 65)" }}>
-                  <span style={{ color: "oklch(0.72 0.12 75)" }}>Tip: </span>{step.tip}
+                <p className="text-xs" style={{ color: "#6B6560" }}>
+                  <span style={{ color: "#C8102E" }}>Tip: </span>{step.tip}
                 </p>
               </div>
             </div>
@@ -211,23 +211,23 @@ export default function Training() {
 
       {/* Benefits Chart */}
       <CollapsibleSection title="Membership Benefits Comparison" icon={BookOpen} defaultOpen={false}>
-        <div className="rounded-lg overflow-hidden border" style={{ borderColor: "oklch(0.22 0.008 55)" }}>
+        <div className="rounded-lg overflow-hidden border" style={{ borderColor: "#2A2A2A" }}>
           <table className="w-full text-xs">
             <thead>
-              <tr style={{ background: "oklch(0.13 0.008 55)" }}>
-                <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>Benefit</th>
-                <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.65 0.06 250)" }}>Visionary</th>
-                <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.65 0.08 60)" }}>Atabey</th>
-                <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.80 0.14 78)" }}>APEX</th>
+              <tr style={{ background: "#141414" }}>
+                <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>Benefit</th>
+                <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#8899CC" }}>Visionary</th>
+                <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#C4A35A" }}>Atabey</th>
+                <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#E8E4DC" }}>APEX</th>
               </tr>
             </thead>
             <tbody>
               {MEMBERSHIP_BENEFITS.map((b, i) => (
-                <tr key={b.benefit} className="border-t" style={{ borderColor: "oklch(0.18 0.006 55)", background: i % 2 === 0 ? "oklch(0.12 0.008 55)" : "oklch(0.10 0.008 55)" }}>
-                  <td className="px-4 py-3 font-medium" style={{ color: "oklch(0.75 0.010 72)" }}>{b.benefit}</td>
-                  <td className="px-4 py-3 text-center" style={{ color: "oklch(0.60 0.06 250)" }}>{b.visionary}</td>
-                  <td className="px-4 py-3 text-center" style={{ color: "oklch(0.65 0.08 60)" }}>{b.atabey}</td>
-                  <td className="px-4 py-3 text-center font-semibold" style={{ color: "oklch(0.80 0.14 78)" }}>{b.apex}</td>
+                <tr key={b.benefit} className="border-t" style={{ borderColor: "#1E1E1E", background: i % 2 === 0 ? "#1C1C1C" : "#161616" }}>
+                  <td className="px-4 py-3 font-medium" style={{ color: "#A09A94" }}>{b.benefit}</td>
+                  <td className="px-4 py-3 text-center" style={{ color: "#8899CC" }}>{b.visionary}</td>
+                  <td className="px-4 py-3 text-center" style={{ color: "#C4A35A" }}>{b.atabey}</td>
+                  <td className="px-4 py-3 text-center font-semibold" style={{ color: "#E8E4DC" }}>{b.apex}</td>
                 </tr>
               ))}
             </tbody>

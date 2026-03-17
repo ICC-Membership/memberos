@@ -11,6 +11,7 @@ import LockerDiagram from "./pages/LockerDiagram";
 import EmailHub from "./pages/EmailHub";
 import Strategy from "./pages/Strategy";
 import Training from "./pages/Training";
+import GrowthEngine from "./pages/GrowthEngine";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
         <Route path="/power-rankings" component={PowerRankings} />
         <Route path="/lockers" component={LockerDiagram} />
         <Route path="/email" component={EmailHub} />
+        <Route path="/growth-engine" component={GrowthEngine} />
         <Route path="/strategy" component={Strategy} />
         <Route path="/training" component={Training} />
         <Route component={NotFound} />

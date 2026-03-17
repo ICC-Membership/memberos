@@ -98,11 +98,11 @@ const EMAILS: Email[] = [
 ];
 
 const CATEGORY_CONFIG: Record<EmailCategory, { label: string; color: string; bg: string }> = {
-  inquiry: { label: "New Inquiry", color: "oklch(0.65 0.15 145)", bg: "oklch(0.35 0.10 145 / 0.20)" },
-  renewal: { label: "Renewal", color: "oklch(0.72 0.12 75)", bg: "oklch(0.72 0.12 75 / 0.15)" },
-  issue: { label: "Issue", color: "oklch(0.70 0.15 30)", bg: "oklch(0.55 0.15 25 / 0.20)" },
-  event: { label: "Event", color: "oklch(0.65 0.10 55)", bg: "oklch(0.55 0.08 55 / 0.20)" },
-  general: { label: "General", color: "oklch(0.60 0.010 70)", bg: "oklch(0.22 0.008 55)" },
+  inquiry: { label: "New Inquiry", color: "#22C55E", bg: "rgba(34,197,94,0.12)" },
+  renewal: { label: "Renewal", color: "#C8102E", bg: "#C8102E" },
+  issue: { label: "Issue", color: "#F97316", bg: "rgba(249,115,22,0.12)" },
+  event: { label: "Event", color: "#C4A35A", bg: "rgba(196,163,90,0.15)" },
+  general: { label: "General", color: "#A09A94", bg: "#2A2A2A" },
 };
 
 const AI_TEMPLATES: Record<EmailCategory, (email: Email) => string> = {
@@ -188,10 +188,10 @@ export default function EmailHub() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.92 0.012 75)" }}>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
             Email Hub
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.008 65)" }}>
+          <p className="text-sm mt-0.5" style={{ color: "#6B6560" }}>
             {unread} unread · Membership-relevant emails with AI reply
           </p>
         </div>
@@ -200,7 +200,7 @@ export default function EmailHub() {
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-xs px-4 py-2 rounded-md border transition-all duration-180"
-          style={{ color: "oklch(0.72 0.12 75)", borderColor: "oklch(0.72 0.12 75 / 0.3)", background: "oklch(0.72 0.12 75 / 0.05)" }}
+          style={{ color: "#C8102E", borderColor: "#C8102E", background: "#C8102E" }}
         >
           <ExternalLink size={12} />
           Open Gmail
@@ -218,13 +218,13 @@ export default function EmailHub() {
               onClick={() => setCategoryFilter(cat)}
               className="text-xs px-3 py-1.5 rounded-md border transition-all duration-180 flex items-center gap-1.5"
               style={{
-                background: categoryFilter === cat ? (cfg?.bg || "oklch(0.18 0.008 55)") : "transparent",
-                borderColor: categoryFilter === cat ? (cfg?.color || "oklch(0.35 0.008 55)") : "oklch(0.22 0.008 55)",
-                color: categoryFilter === cat ? (cfg?.color || "oklch(0.85 0.010 75)") : "oklch(0.50 0.008 65)",
+                background: categoryFilter === cat ? (cfg?.bg || "#1E1E1E") : "transparent",
+                borderColor: categoryFilter === cat ? (cfg?.color || "#3A3A3A") : "#2A2A2A",
+                color: categoryFilter === cat ? (cfg?.color || "#E8E4DC") : "#6B6560",
               }}
             >
               {cat === "All" ? "All" : CATEGORY_CONFIG[cat as EmailCategory].label}
-              <span className="text-[10px] px-1 rounded" style={{ background: "oklch(0.22 0.008 55 / 0.5)" }}>{count}</span>
+              <span className="text-[10px] px-1 rounded" style={{ background: "#2A2A2A" }}>{count}</span>
             </button>
           );
         })}
@@ -240,23 +240,23 @@ export default function EmailHub() {
               onClick={() => { setSelectedEmail(email); setReplyText(""); }}
               className="w-full text-left p-3 rounded-lg border transition-all duration-180"
               style={{
-                background: selectedEmail?.id === email.id ? "oklch(0.18 0.008 55)" : "oklch(0.12 0.008 55)",
-                borderColor: selectedEmail?.id === email.id ? "oklch(0.72 0.12 75 / 0.40)" : "oklch(0.20 0.008 55)",
+                background: selectedEmail?.id === email.id ? "#1E1E1E" : "#1C1C1C",
+                borderColor: selectedEmail?.id === email.id ? "#C8102E" : "#1E1E1E",
               }}
             >
               <div className="flex items-start justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2 min-w-0">
                   {!email.read && (
-                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "oklch(0.72 0.12 75)" }} />
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#C8102E" }} />
                   )}
-                  <span className="text-xs font-semibold truncate" style={{ color: email.read ? "oklch(0.65 0.010 70)" : "oklch(0.90 0.012 75)" }}>
+                  <span className="text-xs font-semibold truncate" style={{ color: email.read ? "#A09A94" : "#E8E4DC" }}>
                     {email.from}
                   </span>
                 </div>
-                <span className="text-[10px] flex-shrink-0" style={{ color: "oklch(0.45 0.006 60)" }}>{email.time}</span>
+                <span className="text-[10px] flex-shrink-0" style={{ color: "#3A3A3A" }}>{email.time}</span>
               </div>
-              <p className="text-xs font-medium mb-1 truncate" style={{ color: "oklch(0.75 0.010 72)" }}>{email.subject}</p>
-              <p className="text-[11px] truncate" style={{ color: "oklch(0.45 0.006 60)" }}>{email.preview}</p>
+              <p className="text-xs font-medium mb-1 truncate" style={{ color: "#A09A94" }}>{email.subject}</p>
+              <p className="text-[11px] truncate" style={{ color: "#3A3A3A" }}>{email.preview}</p>
               <div className="flex items-center gap-2 mt-2">
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded"
@@ -265,7 +265,7 @@ export default function EmailHub() {
                   {CATEGORY_CONFIG[email.category].label}
                 </span>
                 {email.priority === "high" && (
-                  <span className="text-[10px]" style={{ color: "oklch(0.70 0.15 30)" }}>● High</span>
+                  <span className="text-[10px]" style={{ color: "#F97316" }}>● High</span>
                 )}
               </div>
             </button>
@@ -280,17 +280,17 @@ export default function EmailHub() {
               <div className="stat-card flex-1">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.90 0.012 75)" }}>
+                    <h3 className="text-sm font-semibold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
                       {selectedEmail.subject}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs" style={{ color: "oklch(0.72 0.12 75)" }}>{selectedEmail.from}</span>
-                      <span className="text-xs" style={{ color: "oklch(0.45 0.006 60)" }}>·</span>
-                      <span className="text-xs" style={{ color: "oklch(0.45 0.006 60)" }}>{selectedEmail.email}</span>
+                      <span className="text-xs" style={{ color: "#C8102E" }}>{selectedEmail.from}</span>
+                      <span className="text-xs" style={{ color: "#3A3A3A" }}>·</span>
+                      <span className="text-xs" style={{ color: "#3A3A3A" }}>{selectedEmail.email}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px]" style={{ color: "oklch(0.45 0.006 60)" }}>{selectedEmail.time}</span>
+                    <span className="text-[10px]" style={{ color: "#3A3A3A" }}>{selectedEmail.time}</span>
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded"
                       style={{ background: CATEGORY_CONFIG[selectedEmail.category].bg, color: CATEGORY_CONFIG[selectedEmail.category].color }}
@@ -299,23 +299,23 @@ export default function EmailHub() {
                     </span>
                   </div>
                 </div>
-                <div className="gold-rule mb-4" />
-                <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "oklch(0.75 0.010 72)" }}>
+                <div className="red-rule mb-4" />
+                <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "#A09A94" }}>
                   {selectedEmail.body}
                 </p>
               </div>
 
               {/* Reply area */}
-              <div className="stat-card">
+              <div className="icc-card">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Mail size={13} style={{ color: "oklch(0.72 0.12 75)" }} />
-                    <span className="text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Reply</span>
+                    <Mail size={13} style={{ color: "#C8102E" }} />
+                    <span className="text-xs font-semibold" style={{ color: "#C8102E" }}>Reply</span>
                   </div>
                   <button
                     onClick={generateAIReply}
                     className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium transition-all duration-180"
-                    style={{ background: "linear-gradient(135deg, oklch(0.72 0.12 75), oklch(0.80 0.14 78))", color: "oklch(0.10 0.008 55)" }}
+                    style={{ background: "linear-gradient(135deg, #C8102E, #E8E4DC)", color: "#161616" }}
                   >
                     <Sparkles size={11} />
                     AI Draft Reply
@@ -328,14 +328,14 @@ export default function EmailHub() {
                   rows={8}
                   className="w-full text-xs p-3 rounded-md border outline-none resize-none transition-all duration-180"
                   style={{
-                    background: "oklch(0.14 0.008 55)",
-                    border: "1px solid oklch(0.22 0.008 55)",
-                    color: "oklch(0.85 0.010 75)",
+                    background: "#161616",
+                    border: "1px solid #2A2A2A",
+                    color: "#E8E4DC",
                     lineHeight: "1.6",
                   }}
                 />
                 <div className="flex items-center justify-between mt-3">
-                  <p className="text-[10px]" style={{ color: "oklch(0.40 0.006 55)" }}>
+                  <p className="text-[10px]" style={{ color: "#3A3A3A" }}>
                     Reply will be copied to clipboard — paste into Gmail to send
                   </p>
                   <button
@@ -343,9 +343,9 @@ export default function EmailHub() {
                     disabled={!replyText}
                     className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-md font-medium transition-all duration-180 disabled:opacity-40"
                     style={{
-                      background: replyText ? "oklch(0.20 0.008 55)" : "transparent",
-                      border: "1px solid oklch(0.30 0.008 55)",
-                      color: "oklch(0.72 0.12 75)",
+                      background: replyText ? "#1E1E1E" : "transparent",
+                      border: "1px solid #2A2A2A",
+                      color: "#C8102E",
                     }}
                   >
                     <Send size={11} />
@@ -356,7 +356,7 @@ export default function EmailHub() {
             </>
           ) : (
             <div className="stat-card flex-1 flex items-center justify-center">
-              <p className="text-sm" style={{ color: "oklch(0.40 0.006 55)" }}>Select an email to view</p>
+              <p className="text-sm" style={{ color: "#3A3A3A" }}>Select an email to view</p>
             </div>
           )}
         </div>

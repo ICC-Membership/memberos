@@ -43,10 +43,10 @@ function TierBadge({ tier }: { tier: string }) {
 function ScoreBar({ value, max, color }: { value: number; max: number; color: string }) {
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.008 55)" }}>
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#2A2A2A" }}>
         <div className="h-full rounded-full" style={{ width: `${(value / max) * 100}%`, background: color }} />
       </div>
-      <span className="text-xs w-6 text-right" style={{ color: "oklch(0.65 0.010 70)" }}>{value}</span>
+      <span className="text-xs w-6 text-right" style={{ color: "#A09A94" }}>{value}</span>
     </div>
   );
 }
@@ -60,10 +60,10 @@ export default function PowerRankings() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.92 0.012 75)" }}>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
             Power Rankings
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.008 65)" }}>
+          <p className="text-sm mt-0.5" style={{ color: "#6B6560" }}>
             Member scoring for APEX Lounge invitation eligibility — {quarter}
           </p>
         </div>
@@ -74,9 +74,9 @@ export default function PowerRankings() {
               onClick={() => setQuarter(q)}
               className="text-xs px-3 py-2 rounded-md border transition-all duration-180"
               style={{
-                background: quarter === q ? "oklch(0.72 0.12 75 / 0.15)" : "transparent",
-                borderColor: quarter === q ? "oklch(0.72 0.12 75 / 0.5)" : "oklch(0.22 0.008 55)",
-                color: quarter === q ? "oklch(0.80 0.14 78)" : "oklch(0.50 0.008 65)",
+                background: quarter === q ? "#C8102E" : "transparent",
+                borderColor: quarter === q ? "#C8102E" : "#2A2A2A",
+                color: quarter === q ? "#E8E4DC" : "#6B6560",
               }}
             >
               {q}
@@ -86,68 +86,68 @@ export default function PowerRankings() {
       </div>
 
       {/* Scoring key */}
-      <div className="stat-card">
+      <div className="icc-card">
         <div className="flex items-center gap-2 mb-3">
-          <Star size={13} style={{ color: "oklch(0.72 0.12 75)" }} />
-          <h3 className="text-xs font-semibold tracking-wide uppercase" style={{ color: "oklch(0.72 0.12 75)" }}>
+          <Star size={13} style={{ color: "#C8102E" }} />
+          <h3 className="text-xs font-semibold tracking-wide uppercase" style={{ color: "#C8102E" }}>
             Scoring Criteria — 100 Points Total
           </h3>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {SCORING_CRITERIA.map(c => (
-            <div key={c.category} className="p-3 rounded-md" style={{ background: "oklch(0.14 0.008 55)" }}>
+            <div key={c.category} className="p-3 rounded-md" style={{ background: "#161616" }}>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs font-semibold" style={{ color: "oklch(0.85 0.010 75)" }}>{c.category}</span>
-                <span className="text-xs" style={{ color: "oklch(0.72 0.12 75)" }}>/{c.max}</span>
+                <span className="text-xs font-semibold" style={{ color: "#E8E4DC" }}>{c.category}</span>
+                <span className="text-xs" style={{ color: "#C8102E" }}>/{c.max}</span>
               </div>
-              <p className="text-[10px]" style={{ color: "oklch(0.45 0.006 60)" }}>{c.description}</p>
+              <p className="text-[10px]" style={{ color: "#3A3A3A" }}>{c.description}</p>
             </div>
           ))}
         </div>
-        <div className="gold-rule mt-3 pt-3 flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ background: "oklch(0.72 0.12 75)" }} />
-          <p className="text-xs" style={{ color: "oklch(0.65 0.010 70)" }}>
-            APEX Lounge invitation threshold: <span style={{ color: "oklch(0.80 0.14 78)", fontWeight: 600 }}>70+ points</span> — {apexEligible.length} members qualify this quarter
+        <div className="red-rule mt-3 pt-3 flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ background: "#C8102E" }} />
+          <p className="text-xs" style={{ color: "#A09A94" }}>
+            APEX Lounge invitation threshold: <span style={{ color: "#E8E4DC", fontWeight: 600 }}>70+ points</span> — {apexEligible.length} members qualify this quarter
           </p>
         </div>
       </div>
 
       {/* APEX Eligible highlight */}
-      <div className="p-4 rounded-lg border" style={{ background: "oklch(0.72 0.12 75 / 0.06)", borderColor: "oklch(0.72 0.12 75 / 0.25)" }}>
+      <div className="p-4 rounded-lg border" style={{ background: "#C8102E", borderColor: "#C8102E" }}>
         <div className="flex items-center gap-2 mb-3">
-          <Trophy size={14} style={{ color: "oklch(0.80 0.14 78)" }} />
-          <h3 className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.85 0.010 75)" }}>
+          <Trophy size={14} style={{ color: "#E8E4DC" }} />
+          <h3 className="text-sm font-semibold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
             APEX Lounge Invitations — {quarter}
           </h3>
-          <span className="text-xs px-2 py-0.5 rounded-sm ml-auto" style={{ background: "oklch(0.72 0.12 75 / 0.20)", color: "oklch(0.80 0.14 78)" }}>
+          <span className="text-xs px-2 py-0.5 rounded-sm ml-auto" style={{ background: "#C8102E", color: "#E8E4DC" }}>
             {apexEligible.length} Eligible
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
           {apexEligible.map(m => (
-            <div key={m.name} className="flex items-center gap-2 px-3 py-1.5 rounded-md" style={{ background: "oklch(0.14 0.008 55)", border: "1px solid oklch(0.72 0.12 75 / 0.30)" }}>
-              <span className="text-xs font-medium" style={{ color: "oklch(0.85 0.010 75)" }}>{m.name}</span>
-              <span className="text-xs font-bold" style={{ color: "oklch(0.80 0.14 78)" }}>{m.total}</span>
+            <div key={m.name} className="flex items-center gap-2 px-3 py-1.5 rounded-md" style={{ background: "#161616", border: "1px solid #C8102E" }}>
+              <span className="text-xs font-medium" style={{ color: "#E8E4DC" }}>{m.name}</span>
+              <span className="text-xs font-bold" style={{ color: "#E8E4DC" }}>{m.total}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Full rankings table */}
-      <div className="rounded-lg overflow-hidden border" style={{ borderColor: "oklch(0.22 0.008 55)" }}>
+      <div className="rounded-lg overflow-hidden border" style={{ borderColor: "#2A2A2A" }}>
         <table className="w-full text-xs">
           <thead>
-            <tr style={{ background: "oklch(0.13 0.008 55)", borderBottom: "1px solid oklch(0.22 0.008 55)" }}>
-              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase w-10" style={{ color: "oklch(0.50 0.008 65)" }}>#</th>
-              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>Member</th>
-              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>Tier</th>
-              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>Visits</th>
-              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>Spend</th>
-              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>Referrals</th>
-              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>Tenure</th>
-              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>Events</th>
-              <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>Total</th>
-              <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "oklch(0.50 0.008 65)" }}>APEX</th>
+            <tr style={{ background: "#141414", borderBottom: "1px solid #2A2A2A" }}>
+              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase w-10" style={{ color: "#6B6560" }}>#</th>
+              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>Member</th>
+              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>Tier</th>
+              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>Visits</th>
+              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>Spend</th>
+              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>Referrals</th>
+              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>Tenure</th>
+              <th className="text-left px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>Events</th>
+              <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>Total</th>
+              <th className="text-center px-4 py-3 font-medium tracking-wide uppercase" style={{ color: "#6B6560" }}>APEX</th>
             </tr>
           </thead>
           <tbody>
@@ -156,41 +156,41 @@ export default function PowerRankings() {
                 key={m.name}
                 className="border-b transition-colors duration-150"
                 style={{
-                  borderColor: "oklch(0.18 0.006 55)",
-                  background: m.apexEligible ? "oklch(0.72 0.12 75 / 0.04)" : (i % 2 === 0 ? "oklch(0.12 0.008 55)" : "oklch(0.10 0.008 55)"),
+                  borderColor: "#1E1E1E",
+                  background: m.apexEligible ? "#C8102E" : (i % 2 === 0 ? "#1C1C1C" : "#161616"),
                 }}
               >
                 <td className="px-4 py-3">
-                  <span className="font-bold" style={{ color: m.rank <= 3 ? "oklch(0.80 0.14 78)" : "oklch(0.45 0.006 60)" }}>
+                  <span className="font-bold" style={{ color: m.rank <= 3 ? "#E8E4DC" : "#3A3A3A" }}>
                     {m.rank}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "oklch(0.20 0.008 55)", color: "oklch(0.72 0.12 75)" }}>
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "#1E1E1E", color: "#C8102E" }}>
                       {m.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                     </div>
-                    <span className="font-medium" style={{ color: "oklch(0.85 0.010 75)" }}>{m.name}</span>
+                    <span className="font-medium" style={{ color: "#E8E4DC" }}>{m.name}</span>
                   </div>
                 </td>
                 <td className="px-4 py-3"><TierBadge tier={m.tier} /></td>
-                <td className="px-4 py-3 w-24"><ScoreBar value={m.visits} max={30} color="oklch(0.55 0.10 250)" /></td>
-                <td className="px-4 py-3 w-24"><ScoreBar value={m.spend} max={25} color="oklch(0.60 0.10 145)" /></td>
-                <td className="px-4 py-3 w-24"><ScoreBar value={m.referrals} max={20} color="oklch(0.65 0.10 55)" /></td>
-                <td className="px-4 py-3 w-24"><ScoreBar value={m.tenure} max={15} color="oklch(0.60 0.08 300)" /></td>
-                <td className="px-4 py-3 w-24"><ScoreBar value={m.events} max={10} color="oklch(0.65 0.12 25)" /></td>
+                <td className="px-4 py-3 w-24"><ScoreBar value={m.visits} max={30} color="#8899CC" /></td>
+                <td className="px-4 py-3 w-24"><ScoreBar value={m.spend} max={25} color="#22C55E" /></td>
+                <td className="px-4 py-3 w-24"><ScoreBar value={m.referrals} max={20} color="#C4A35A" /></td>
+                <td className="px-4 py-3 w-24"><ScoreBar value={m.tenure} max={15} color="#9B7FC7" /></td>
+                <td className="px-4 py-3 w-24"><ScoreBar value={m.events} max={10} color="#C8102E" /></td>
                 <td className="px-4 py-3 text-center">
-                  <span className="text-sm font-bold" style={{ color: m.total >= APEX_THRESHOLD ? "oklch(0.80 0.14 78)" : "oklch(0.65 0.010 70)" }}>
+                  <span className="text-sm font-bold" style={{ color: m.total >= APEX_THRESHOLD ? "#E8E4DC" : "#A09A94" }}>
                     {m.total}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center">
                   {m.total >= APEX_THRESHOLD ? (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 0.20)", color: "oklch(0.80 0.14 78)" }}>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#C8102E", color: "#E8E4DC" }}>
                       Invited
                     </span>
                   ) : (
-                    <span style={{ color: "oklch(0.35 0.006 55)" }}>—</span>
+                    <span style={{ color: "#3A3A3A" }}>—</span>
                   )}
                 </td>
               </tr>
@@ -199,9 +199,9 @@ export default function PowerRankings() {
         </table>
       </div>
 
-      <p className="text-xs text-center" style={{ color: "oklch(0.40 0.006 55)" }}>
+      <p className="text-xs text-center" style={{ color: "#3A3A3A" }}>
         Power Rankings are updated quarterly. Connect your Google Sheets for live scoring data.{" "}
-        <a href="https://docs.google.com/spreadsheets/d/1_aB7FswtK24TBhdJ0Rk0WyTcZcxX76lV2MEGkrDe23w" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1" style={{ color: "oklch(0.72 0.12 75)" }}>
+        <a href="https://docs.google.com/spreadsheets/d/1_aB7FswtK24TBhdJ0Rk0WyTcZcxX76lV2MEGkrDe23w" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1" style={{ color: "#C8102E" }}>
           Open Spreadsheet <ExternalLink size={10} />
         </a>
       </p>

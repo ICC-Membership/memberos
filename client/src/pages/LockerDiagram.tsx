@@ -60,11 +60,11 @@ const generateLockers = (): Locker[] => {
 const ALL_LOCKERS = generateLockers();
 
 const STATUS_CONFIG: Record<LockerStatus, { label: string; bg: string; border: string; text: string; glow?: string }> = {
-  apex: { label: "APEX", bg: "oklch(0.72 0.12 75 / 0.20)", border: "oklch(0.72 0.12 75 / 0.70)", text: "oklch(0.80 0.14 78)", glow: "0 0 8px oklch(0.72 0.12 75 / 0.25)" },
-  atabey: { label: "Atabey", bg: "oklch(0.55 0.08 55 / 0.20)", border: "oklch(0.60 0.10 58 / 0.60)", text: "oklch(0.75 0.08 60)" },
-  visionary: { label: "Visionary", bg: "oklch(0.45 0.04 250 / 0.20)", border: "oklch(0.55 0.06 255 / 0.60)", text: "oklch(0.70 0.06 255)" },
-  available: { label: "Available", bg: "oklch(0.14 0.006 55)", border: "oklch(0.22 0.006 55)", text: "oklch(0.35 0.006 55)" },
-  reserved: { label: "Reserved", bg: "oklch(0.55 0.10 75 / 0.10)", border: "oklch(0.72 0.12 75 / 0.30)", text: "oklch(0.65 0.10 75)" },
+  apex: { label: "APEX", bg: "#C8102E", border: "#C8102E", text: "#E8E4DC", glow: "0 0 8px #C8102E" },
+  atabey: { label: "Atabey", bg: "rgba(196,163,90,0.15)", border: "rgba(196,163,90,0.60)", text: "#C4A35A" },
+  visionary: { label: "Visionary", bg: "rgba(136,153,204,0.15)", border: "rgba(136,153,204,0.60)", text: "#8899CC" },
+  available: { label: "Available", bg: "#161616", border: "#2A2A2A", text: "#3A3A3A" },
+  reserved: { label: "Reserved", bg: "rgba(196,163,90,0.10)", border: "#C8102E", text: "#C4A35A" },
 };
 
 export default function LockerDiagram() {
@@ -87,10 +87,10 @@ export default function LockerDiagram() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.92 0.012 75)" }}>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
             Locker Diagram
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.008 65)" }}>
+          <p className="text-sm mt-0.5" style={{ color: "#6B6560" }}>
             Visual locker assignment — {stats.occupied} occupied, {stats.available} available
           </p>
         </div>
@@ -99,15 +99,15 @@ export default function LockerDiagram() {
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: "Total Lockers", value: stats.total, color: "oklch(0.65 0.010 70)" },
-          { label: "Occupied", value: stats.occupied, color: "oklch(0.65 0.010 70)" },
-          { label: "APEX", value: stats.apex, color: "oklch(0.80 0.14 78)" },
-          { label: "Atabey", value: stats.atabey, color: "oklch(0.70 0.08 60)" },
-          { label: "Visionary", value: stats.visionary, color: "oklch(0.65 0.06 255)" },
+          { label: "Total Lockers", value: stats.total, color: "#A09A94" },
+          { label: "Occupied", value: stats.occupied, color: "#A09A94" },
+          { label: "APEX", value: stats.apex, color: "#E8E4DC" },
+          { label: "Atabey", value: stats.atabey, color: "#C4A35A" },
+          { label: "Visionary", value: stats.visionary, color: "#8899CC" },
         ].map(({ label, value, color }) => (
           <div key={label} className="stat-card text-center py-3">
-            <p className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color }}>{value}</p>
-            <p className="text-xs mt-0.5" style={{ color: "oklch(0.50 0.008 65)" }}>{label}</p>
+            <p className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", color }}>{value}</p>
+            <p className="text-xs mt-0.5" style={{ color: "#6B6560" }}>{label}</p>
           </div>
         ))}
       </div>
@@ -139,13 +139,13 @@ export default function LockerDiagram() {
           const filtered = filter === "All" ? sectionLockers : sectionLockers.filter(l => l.status === filter);
 
           return (
-            <div key={section} className="stat-card">
+            <div key={section} className="icc-card">
               <div className="flex items-center gap-2 mb-4">
-                <Archive size={13} style={{ color: "oklch(0.72 0.12 75)" }} />
-                <h3 className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.85 0.010 75)" }}>
+                <Archive size={13} style={{ color: "#C8102E" }} />
+                <h3 className="text-sm font-semibold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>
                   {section}
                 </h3>
-                <span className="text-xs ml-auto" style={{ color: "oklch(0.50 0.008 65)" }}>
+                <span className="text-xs ml-auto" style={{ color: "#6B6560" }}>
                   {sectionLockers.filter(l => l.status !== "available").length} / {sectionLockers.length} occupied
                 </span>
               </div>
@@ -161,9 +161,9 @@ export default function LockerDiagram() {
                       className="locker-cell flex flex-col items-center justify-center gap-0.5 transition-all duration-180"
                       style={{
                         background: cfg.bg,
-                        borderColor: isSelected ? "oklch(0.80 0.14 78)" : cfg.border,
+                        borderColor: isSelected ? "#E8E4DC" : cfg.border,
                         color: cfg.text,
-                        boxShadow: isSelected ? `0 0 12px oklch(0.72 0.12 75 / 0.40)` : (locker.status === "apex" ? cfg.glow : undefined),
+                        boxShadow: isSelected ? `0 0 12px #C8102E` : (locker.status === "apex" ? cfg.glow : undefined),
                         opacity: dimmed ? 0.25 : 1,
                         minHeight: "52px",
                         padding: "6px 4px",
@@ -191,28 +191,28 @@ export default function LockerDiagram() {
         <div
           className="fixed bottom-6 right-6 p-4 rounded-xl border shadow-2xl z-50 min-w-[240px]"
           style={{
-            background: "oklch(0.14 0.008 55)",
-            borderColor: "oklch(0.72 0.12 75 / 0.40)",
-            boxShadow: "0 8px 32px oklch(0 0 0 / 0.50)",
+            background: "#161616",
+            borderColor: "#C8102E",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.50)",
           }}
         >
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Info size={13} style={{ color: "oklch(0.72 0.12 75)" }} />
-              <span className="text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>
+              <Info size={13} style={{ color: "#C8102E" }} />
+              <span className="text-xs font-semibold" style={{ color: "#C8102E" }}>
                 Locker {selectedLocker.number}
               </span>
             </div>
-            <button onClick={() => setSelectedLocker(null)} style={{ color: "oklch(0.45 0.006 60)" }} className="text-xs">✕</button>
+            <button onClick={() => setSelectedLocker(null)} style={{ color: "#3A3A3A" }} className="text-xs">✕</button>
           </div>
-          <p className="text-sm font-medium" style={{ color: "oklch(0.92 0.012 75)" }}>
+          <p className="text-sm font-medium" style={{ color: "#E8E4DC" }}>
             {selectedLocker.member || "Available"}
           </p>
           {selectedLocker.tier && (
-            <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.010 70)" }}>{selectedLocker.tier} Member</p>
+            <p className="text-xs mt-1" style={{ color: "#A09A94" }}>{selectedLocker.tier} Member</p>
           )}
-          <p className="text-xs mt-1" style={{ color: "oklch(0.50 0.008 65)" }}>{selectedLocker.section}</p>
-          <div className="mt-2 pt-2 border-t" style={{ borderColor: "oklch(0.22 0.008 55)" }}>
+          <p className="text-xs mt-1" style={{ color: "#6B6560" }}>{selectedLocker.section}</p>
+          <div className="mt-2 pt-2 border-t" style={{ borderColor: "#2A2A2A" }}>
             <span
               className="text-[10px] px-2 py-0.5 rounded-sm capitalize"
               style={{ background: STATUS_CONFIG[selectedLocker.status].bg, color: STATUS_CONFIG[selectedLocker.status].text }}
