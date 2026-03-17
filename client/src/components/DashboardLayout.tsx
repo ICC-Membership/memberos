@@ -21,6 +21,9 @@ import {
   ExternalLink,
   Zap,
   Menu,
+  Target,
+  UserPlus,
+  FileText,
 } from "lucide-react";
 
 const ICC_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663388846002/JxsvGXqZ8SL52kxCjJkGqG/icc-logo_4d91d6f7.png";
@@ -28,9 +31,12 @@ const ICC_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663388846002/JxsvG
 const NAV_ITEMS = [
   { href: "/", icon: LayoutDashboard, label: "Command Center" },
   { href: "/members", icon: Users, label: "Members" },
+  { href: "/prospects", icon: UserPlus, label: "Prospects" },
   { href: "/power-rankings", icon: Trophy, label: "Power Rankings" },
   { href: "/lockers", icon: Grid3X3, label: "Locker Diagram" },
   { href: "/email", icon: Mail, label: "Email Hub" },
+  { href: "/rocks", icon: Target, label: "EOS Rocks" },
+  { href: "/meeting-notes", icon: FileText, label: "L10 Notes" },
   { href: "/growth-engine", icon: Zap, label: "Growth Engine" },
   { href: "/strategy", icon: TrendingUp, label: "Strategy" },
   { href: "/training", icon: BookOpen, label: "Training" },

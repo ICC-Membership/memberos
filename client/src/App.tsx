@@ -12,6 +12,9 @@ import EmailHub from "./pages/EmailHub";
 import Strategy from "./pages/Strategy";
 import Training from "./pages/Training";
 import GrowthEngine from "./pages/GrowthEngine";
+import Rocks from "./pages/Rocks";
+import MeetingNotes from "./pages/MeetingNotes";
+import Prospects from "./pages/Prospects";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -20,9 +23,12 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/members" component={Members} />
+        <Route path="/prospects" component={Prospects} />
         <Route path="/power-rankings" component={PowerRankings} />
         <Route path="/lockers" component={LockerDiagram} />
         <Route path="/email" component={EmailHub} />
+        <Route path="/rocks" component={Rocks} />
+        <Route path="/meeting-notes" component={MeetingNotes} />
         <Route path="/growth-engine" component={GrowthEngine} />
         <Route path="/strategy" component={Strategy} />
         <Route path="/training" component={Training} />
