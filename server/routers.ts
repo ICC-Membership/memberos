@@ -237,6 +237,105 @@ Write a warm, professional reply. Keep it concise and helpful.`,
       .mutation(({ input }) => upsertProspect(input as any)),
   }),
 
+  shopify: router({
+    // Fetch live member/subscription data from Shopify using client credentials
+    syncMembers: protectedProcedure.mutation(async () => {
+      const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
+      const clientId = process.env.SHOPIFY_CLIENT_ID;
+      const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+
+      if (!storeDomain || !clientId || !clientSecret) {
+        throw new Error("Shopify credentials not configured");
+      }
+
+      // Get a fresh access token using client credentials
+      const tokenRes = await fetch(`https://${storeDomain}/admin/oauth/access_token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, grant_type: "client_credentials" }),
+      });
+      const tokenData = await tokenRes.json() as { access_token?: string };
+      const accessToken = tokenData.access_token;
+      if (!accessToken) throw new Error("Failed to get Shopify access token");
+
+      // Fetch customers with membership tags
+      const customersRes = await fetch(
+        `https://${storeDomain}/admin/api/2026-04/customers.json?limit=250&fields=id,first_name,last_name,email,phone,tags,created_at,note`,
+        { headers: { "X-Shopify-Access-Token": accessToken } }
+      );
+      const customersData = await customersRes.json() as { customers?: any[] };
+      const customers = customersData.customers || [];
+
+      // Filter to only customers with membership-related tags
+      const memberTierMap: Record<string, string> = {
+        "apex": "APEX",
+        "atabey": "Atabey",
+        "visionary": "Visionary",
+        "member": "Visionary",
+      };
+
+      let synced = 0;
+      for (const c of customers) {
+        const tags: string[] = (c.tags || "").toLowerCase().split(",").map((t: string) => t.trim());
+        let tier: string | undefined;
+        for (const tag of tags) {
+          for (const [key, val] of Object.entries(memberTierMap)) {
+            if (tag.includes(key)) { tier = val; break; }
+          }
+          if (tier) break;
+        }
+        if (!tier) continue; // skip non-members
+
+        await upsertMember({
+          externalId: String(c.id),
+          name: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unknown",
+          email: c.email || undefined,
+          phone: c.phone || undefined,
+          tier: tier as any,
+          status: "Active",
+          notes: c.note || undefined,
+          joinedAt: c.created_at ? new Date(c.created_at) : undefined,
+        });
+        synced++;
+      }
+      return { synced, total: customers.length };
+    }),
+
+    liveStats: publicProcedure.query(async () => {
+      const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
+      const clientId = process.env.SHOPIFY_CLIENT_ID;
+      const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+      if (!storeDomain || !clientId || !clientSecret) return null;
+
+      try {
+        const tokenRes = await fetch(`https://${storeDomain}/admin/oauth/access_token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, grant_type: "client_credentials" }),
+        });
+        const tokenData = await tokenRes.json() as { access_token?: string };
+        const accessToken = tokenData.access_token;
+        if (!accessToken) return null;
+
+        // Get customer count
+        const countRes = await fetch(
+          `https://${storeDomain}/admin/api/2026-04/customers/count.json`,
+          { headers: { "X-Shopify-Access-Token": accessToken } }
+        );
+        const countData = await countRes.json() as { count?: number };
+
+        return {
+          totalCustomers: countData.count || 0,
+          storeDomain,
+          lastSynced: new Date(),
+        };
+      } catch (e) {
+        console.error("Shopify liveStats error:", e);
+        return null;
+      }
+    }),
+  }),
+
   dashboard: router({
     summary: publicProcedure.query(async () => {
       const [stats, allRocks, recentEmails, recentNotes] = await Promise.all([

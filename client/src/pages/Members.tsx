@@ -1,9 +1,11 @@
-/*
- * Members — ICC Membership OS Wave 2
- * ICC brand: near-black, #C8102E red, Bebas Neue headings
+/**
+ * Members — ICC Membership OS
+ * Live data from tRPC + Shopify sync
  */
 import { useState } from "react";
-import { Search, ExternalLink, Filter } from "lucide-react";
+import { Search, ExternalLink, Filter, RefreshCw, CheckCircle } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 const ICC_RED = "#C8102E";
 const SURFACE = "#1C1C1C";
@@ -11,24 +13,6 @@ const BORDER = "#2A2A2A";
 const TEXT = "#E8E4DC";
 const TEXT_DIM = "#6B6560";
 const MUTED = "#3A3A3A";
-
-const MEMBERS = [
-  { id: "#33050165568", name: "Matt Miller", email: "utpilot@gmail.com", tier: "Visionary", status: "Active", joined: "Mar 02, 2026", renewal: "Apr 02, 2026", locker: false },
-  { id: "#32517849408", name: "Harold Bishop Jr.", email: "lsiu_tigers86@icloud.com", tier: "APEX", status: "Active", joined: "Feb 23, 2026", renewal: "Mar 23, 2026", locker: true },
-  { id: "#32340934976", name: "Caden Posey", email: "cadenposey11@gmail.com", tier: "Atabey", status: "Active", joined: "Feb 21, 2026", renewal: "Mar 21, 2026", locker: false },
-  { id: "#31698583872", name: "Robert DiMarco", email: "rdimarco@novarra.vc", tier: "APEX", status: "Active", joined: "Feb 11, 2026", renewal: "Apr 11, 2026", locker: true },
-  { id: "#28781019456", name: "Norris Washington", email: "nwashington3.nw@gmail.com", tier: "Visionary", status: "Active", joined: "Dec 24, 2025", renewal: "Mar 24, 2026", locker: false },
-  { id: "#28720038208", name: "Jason Passwaters", email: "yana.mccormick@passwaters.com", tier: "Atabey", status: "Active", joined: "Dec 23, 2025", renewal: "Mar 23, 2026", locker: true },
-  { id: "#28675244352", name: "Derrick Coleman", email: "a.derrickcoleman@gmail.com", tier: "Visionary", status: "Active", joined: "Dec 22, 2025", renewal: "Mar 22, 2026", locker: false },
-  { id: "#28285305152", name: "Sterling Mott", email: "sterling.mott@gmail.com", tier: "APEX", status: "Active", joined: "Dec 16, 2025", renewal: "Jun 20, 2026", locker: true },
-  { id: "#27955986752", name: "Chris Williams", email: "ccprep2020@gmail.com", tier: "Atabey", status: "Active", joined: "Dec 11, 2025", renewal: "Apr 11, 2026", locker: false },
-  { id: "#25463521600", name: "Howard Stokes", email: "howard0685@gmail.com", tier: "Visionary", status: "Active", joined: "Nov 08, 2025", renewal: "Apr 08, 2026", locker: false },
-  { id: "#25227788608", name: "Dack Lowery", email: "dack300z@yahoo.com", tier: "Atabey", status: "Active", joined: "Nov 01, 2025", renewal: "Apr 01, 2026", locker: true },
-  { id: "#24100000001", name: "James Thornton", email: "j.thornton@email.com", tier: "APEX", status: "Active", joined: "Oct 15, 2025", renewal: "Apr 15, 2026", locker: true },
-  { id: "#24100000002", name: "Marcus Reed", email: "mreed@gmail.com", tier: "Visionary", status: "Paused", joined: "Sep 20, 2025", renewal: "Mar 20, 2026", locker: false },
-  { id: "#24100000003", name: "David Chen", email: "dchen@outlook.com", tier: "Atabey", status: "Active", joined: "Sep 05, 2025", renewal: "Apr 05, 2026", locker: true },
-  { id: "#24100000004", name: "Tyler Brooks", email: "tbrooks@gmail.com", tier: "Visionary", status: "Active", joined: "Aug 12, 2025", renewal: "Apr 12, 2026", locker: false },
-];
 
 function TierBadge({ tier }: { tier: string }) {
   if (tier === "APEX") return <span className="tier-badge-apex">{tier}</span>;
@@ -55,36 +39,82 @@ export default function Members() {
   const [tierFilter, setTierFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
 
-  const filtered = MEMBERS.filter((m) => {
-    const matchSearch = m.name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase());
+  const { data: members = [], isLoading, refetch } = trpc.members.list.useQuery();
+  const { data: shopifyStats } = trpc.shopify.liveStats.useQuery();
+  const syncMutation = trpc.shopify.syncMembers.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Synced ${data.synced} members from Shopify`);
+      refetch();
+    },
+    onError: (err) => toast.error(`Sync failed: ${err.message}`),
+  });
+
+  const filtered = members.filter((m: any) => {
+    const matchSearch = m.name?.toLowerCase().includes(search.toLowerCase()) ||
+      m.email?.toLowerCase().includes(search.toLowerCase());
     const matchTier = tierFilter === "All" || m.tier === tierFilter;
     const matchStatus = statusFilter === "All" || m.status === statusFilter;
     return matchSearch && matchTier && matchStatus;
   });
 
+  const activeCount = members.filter((m: any) => m.status === "Active").length;
+
   return (
     <div className="p-6 space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.75rem", letterSpacing: "0.04em", color: TEXT, lineHeight: 1 }}>
             MEMBERS
           </h1>
           <p style={{ fontSize: "0.78rem", marginTop: "0.25rem", color: TEXT_DIM }}>
-            135 active members · Showing {filtered.length} results
+            {isLoading ? "Loading..." : `${activeCount} active members · Showing ${filtered.length} results`}
+            {shopifyStats && (
+              <span style={{ marginLeft: "0.75rem", color: "#22C55E" }}>
+                ● Shopify: {shopifyStats.totalCustomers.toLocaleString()} total customers
+              </span>
+            )}
           </p>
         </div>
-        <a
-          href="https://admin.shopify.com/store/08bcdd/apps/appstle-memberships/dashboards/subscriptions"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2"
-          style={{ background: ICC_RED, color: "white", fontSize: "0.75rem", fontWeight: 600, padding: "0.5rem 1rem", borderRadius: "0.25rem" }}
-        >
-          <ExternalLink size={12} />
-          Open Appstle
-        </a>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            className="flex items-center gap-2"
+            style={{
+              background: syncMutation.isPending ? "#2A2A2A" : "rgba(200,16,46,0.15)",
+              color: syncMutation.isPending ? TEXT_DIM : ICC_RED,
+              border: `1px solid rgba(200,16,46,0.30)`,
+              fontSize: "0.75rem", fontWeight: 600,
+              padding: "0.5rem 1rem", borderRadius: "0.25rem",
+              cursor: syncMutation.isPending ? "not-allowed" : "pointer",
+            }}
+          >
+            <RefreshCw size={12} className={syncMutation.isPending ? "animate-spin" : ""} />
+            {syncMutation.isPending ? "Syncing..." : "Sync from Shopify"}
+          </button>
+          <a
+            href="https://admin.shopify.com/store/08bcdd/apps/appstle-memberships/dashboards/subscriptions"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2"
+            style={{ background: ICC_RED, color: "white", fontSize: "0.75rem", fontWeight: 600, padding: "0.5rem 1rem", borderRadius: "0.25rem" }}
+          >
+            <ExternalLink size={12} />
+            Open Appstle
+          </a>
+        </div>
       </div>
+
+      {/* Shopify Connected Banner */}
+      {shopifyStats && (
+        <div className="flex items-center gap-2 px-4 py-2 rounded" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.20)" }}>
+          <CheckCircle size={13} style={{ color: "#22C55E" }} />
+          <span style={{ fontSize: "0.72rem", color: "#22C55E" }}>
+            Shopify connected — {shopifyStats.storeDomain} · Click "Sync from Shopify" to import members with membership tags
+          </span>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
@@ -136,76 +166,88 @@ export default function Members() {
 
       {/* Table */}
       <div className="rounded overflow-hidden" style={{ border: `1px solid ${BORDER}` }}>
-        <table className="w-full text-xs">
-          <thead>
-            <tr style={{ background: "#161616", borderBottom: `1px solid ${BORDER}` }}>
-              {["Member", "Tier", "Status", "Joined", "Next Renewal", "Locker", ""].map((h) => (
-                <th key={h} className="text-left px-4 py-3" style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase", color: MUTED }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((m, i) => (
-              <tr
-                key={m.id}
-                className="border-b transition-colors"
-                style={{
-                  borderColor: "#1E1E1E",
-                  background: i % 2 === 0 ? "#1C1C1C" : "#161616",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#222222")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? "#1C1C1C" : "#161616")}
-              >
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      style={{ background: "#1E1E1E", color: ICC_RED, border: `1px solid #2A2A2A` }}
-                    >
-                      {m.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                    </div>
-                    <div>
-                      <p style={{ fontWeight: 600, color: TEXT }}>{m.name}</p>
-                      <p style={{ color: MUTED, fontSize: "0.7rem" }}>{m.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3"><TierBadge tier={m.tier} /></td>
-                <td className="px-4 py-3"><StatusBadge status={m.status} /></td>
-                <td className="px-4 py-3" style={{ color: TEXT_DIM }}>{m.joined}</td>
-                <td className="px-4 py-3">
-                  <span style={{ color: "#C4A35A", fontWeight: 600 }}>{m.renewal}</span>
-                </td>
-                <td className="px-4 py-3">
-                  {m.locker ? (
-                    <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "0.1rem 0.4rem", borderRadius: "0.2rem", background: "rgba(196,163,90,0.12)", color: "#C4A35A" }}>YES</span>
-                  ) : (
-                    <span style={{ color: MUTED }}>—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <a
-                    href="https://admin.shopify.com/store/08bcdd/apps/appstle-memberships/dashboards/subscriptions"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: MUTED, transition: "color 0.15s" }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = ICC_RED)}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = MUTED)}
-                  >
-                    <ExternalLink size={12} />
-                  </a>
-                </td>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16" style={{ color: TEXT_DIM }}>
+            <RefreshCw size={16} className="animate-spin mr-2" />
+            Loading members...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3" style={{ color: TEXT_DIM }}>
+            <p style={{ fontSize: "0.85rem" }}>No members found</p>
+            <button
+              onClick={() => syncMutation.mutate()}
+              style={{ background: ICC_RED, color: "white", fontSize: "0.75rem", fontWeight: 600, padding: "0.5rem 1.25rem", borderRadius: "0.25rem" }}
+            >
+              Sync from Shopify to import members
+            </button>
+          </div>
+        ) : (
+          <table className="w-full text-xs">
+            <thead>
+              <tr style={{ background: "#161616", borderBottom: `1px solid ${BORDER}` }}>
+                {["Member", "Tier", "Status", "Joined", "Next Renewal", "Locker", ""].map((h) => (
+                  <th key={h} className="text-left px-4 py-3" style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase", color: MUTED }}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((m: any, i: number) => (
+                <tr
+                  key={m.id}
+                  className="border-b transition-colors"
+                  style={{ borderColor: "#1E1E1E", background: i % 2 === 0 ? "#1C1C1C" : "#161616" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#222222")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? "#1C1C1C" : "#161616")}
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ background: "#1E1E1E", color: ICC_RED, border: `1px solid #2A2A2A` }}
+                      >
+                        {(m.name || "?").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p style={{ fontWeight: 600, color: TEXT }}>{m.name}</p>
+                        <p style={{ color: MUTED, fontSize: "0.7rem" }}>{m.email || "—"}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3"><TierBadge tier={m.tier || "Visionary"} /></td>
+                  <td className="px-4 py-3"><StatusBadge status={m.status || "Active"} /></td>
+                  <td className="px-4 py-3" style={{ color: TEXT_DIM }}>
+                    {m.joinedAt ? new Date(m.joinedAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span style={{ color: "#C4A35A", fontWeight: 600 }}>
+                      {m.renewalDate ? new Date(m.renewalDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {m.lockerNumber ? (
+                      <span style={{ fontSize: "0.7rem", color: "#C4A35A", fontWeight: 600 }}>#{m.lockerNumber}</span>
+                    ) : (
+                      <span style={{ color: MUTED }}>—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <a
+                      href={`https://admin.shopify.com/store/08bcdd/customers/${m.externalId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: ICC_RED, fontSize: "0.7rem" }}
+                    >
+                      <ExternalLink size={12} />
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
-
-      <p style={{ fontSize: "0.7rem", textAlign: "center", color: MUTED }}>
-        Showing sample data · Connect to Appstle for live member records
-      </p>
     </div>
   );
 }
