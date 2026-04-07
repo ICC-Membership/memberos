@@ -115,3 +115,16 @@ export const prospects = mysqlTable("prospects", {
 
 export type Prospect = typeof prospects.$inferSelect;
 export type InsertProspect = typeof prospects.$inferInsert;
+
+// ─── Integration Tokens (OAuth tokens for external services) ─────────────────
+export const integrationTokens = mysqlTable("integrationTokens", {
+  id: int("id").autoincrement().primaryKey(),
+  service: varchar("service", { length: 64 }).notNull().unique(), // e.g. "lightspeed", "salto"
+  accessToken: text("accessToken").notNull(),
+  refreshToken: text("refreshToken"),
+  accountId: varchar("accountId", { length: 128 }),
+  expiresAt: int("expiresAt"), // unix ms timestamp
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type IntegrationToken = typeof integrationTokens.$inferSelect;

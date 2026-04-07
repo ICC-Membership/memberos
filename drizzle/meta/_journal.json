@@ -15,6 +15,13 @@
       "when": 1773779187042,
       "tag": "0001_flimsy_doctor_octopus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775522861820,
+      "tag": "0002_smiling_sue_storm",
+      "breakpoints": true
     }
   ]
 }

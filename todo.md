@@ -20,6 +20,9 @@
 - [ ] Morning Briefing — scheduled daily 8 AM summary email
 - [ ] Typeform webhook — auto-populate prospects from inquiry form
 - [ ] Appstle/Shopify live member sync via API
+- [x] Lightspeed R-Series OAuth integration — routes, token storage, DB schema
+- [ ] Lightspeed OAuth authorization — complete connect flow via published domain
+- [ ] Lightspeed data sync — customers, sales, visit frequency per member
 
 ## Backlog
 - [ ] Typeform inquiry feed in Email Hub
