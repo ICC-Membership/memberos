@@ -4,8 +4,9 @@
  * Categories: New Inquiries, Renewals, Member Issues, Events
  */
 import { useState } from "react";
-import { Mail, Send, Sparkles, Tag, Clock, ChevronRight, ExternalLink } from "lucide-react";
+import { Mail, Send, Sparkles, Tag, Clock, ChevronRight, ExternalLink, Inbox, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 type EmailCategory = "inquiry" | "renewal" | "issue" | "event" | "general";
 
@@ -167,6 +168,16 @@ export default function EmailHub() {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(EMAILS[0]);
   const [replyText, setReplyText] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
+  const [activeTab, setActiveTab] = useState<"inbox" | "queue">("inbox");
+
+  // Live draft queue from DB
+  const { data: queueStats, refetch: refetchQueue } = trpc.emailAutomation.queueStats.useQuery();
+  const processQueueMutation = trpc.emailAutomation.processQueue.useMutation({
+    onSuccess: () => {
+      toast.success("Queue processing triggered — check Gmail Drafts shortly");
+      refetchQueue();
+    },
+  });
 
   const filtered = categoryFilter === "All" ? EMAILS : EMAILS.filter(e => e.category === categoryFilter);
   const unread = EMAILS.filter(e => !e.read).length;
@@ -207,7 +218,121 @@ export default function EmailHub() {
         </a>
       </div>
 
-      {/* Category filters */}
+      {/* Tab switcher */}
+      <div className="flex gap-2 border-b" style={{ borderColor: "#1a1a1a" }}>
+        {(["inbox", "queue"] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className="px-4 py-2 text-sm font-medium transition-all"
+            style={{
+              color: activeTab === tab ? "#C8102E" : "#555",
+              background: "none",
+              border: "none",
+              borderBottom: activeTab === tab ? "2px solid #C8102E" : "2px solid transparent",
+              cursor: "pointer",
+              fontFamily: "'Bebas Neue', sans-serif",
+              letterSpacing: "0.05em",
+              fontSize: "0.9rem",
+            }}
+          >
+            {tab === "inbox" ? (
+              <span className="flex items-center gap-1.5"><Inbox size={13} /> INBOX ({unread} unread)</span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <Mail size={13} /> DRAFT QUEUE
+                {queueStats && queueStats.pending > 0 && (
+                  <span style={{ background: "#C8102E", color: "white", borderRadius: "10px", padding: "1px 6px", fontSize: "0.65rem" }}>
+                    {queueStats.pending}
+                  </span>
+                )}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Draft Queue Panel */}
+      {activeTab === "queue" && (
+        <div className="space-y-4">
+          {/* Queue stats */}
+          <div className="flex gap-3 flex-wrap">
+            {[
+              { label: "Pending", value: queueStats?.pending ?? 0, color: "#C8102E" },
+              { label: "Drafted", value: queueStats?.drafted ?? 0, color: "#4CAF50" },
+              { label: "Failed", value: queueStats?.failed ?? 0, color: "#FF9800" },
+              { label: "Total", value: queueStats?.total ?? 0, color: "#555" },
+            ].map(s => (
+              <div key={s.label} style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: "6px", padding: "8px 16px", textAlign: "center" }}>
+                <div style={{ fontSize: "1.2rem", fontFamily: "'Bebas Neue', sans-serif", color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: "0.65rem", color: "#444", letterSpacing: "0.05em" }}>{s.label.toUpperCase()}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Queue type breakdown */}
+          {queueStats && Object.keys(queueStats.byType).length > 0 && (
+            <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: "8px", padding: "12px 16px" }}>
+              <div style={{ fontSize: "0.7rem", color: "#555", letterSpacing: "0.08em", marginBottom: "8px" }}>PENDING BY TYPE</div>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(queueStats.byType).map(([type, count]) => (
+                  <span key={type} style={{ background: "rgba(200,16,46,0.1)", border: "1px solid rgba(200,16,46,0.3)", borderRadius: "4px", padding: "2px 8px", fontSize: "0.75rem", color: "#C8102E" }}>
+                    {type.replace(/_/g, " ")} ({count})
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Process button */}
+          <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: "8px", padding: "16px" }}>
+            <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: "12px", lineHeight: 1.5 }}>
+              Clicking <strong style={{ color: "#E8E4DC" }}>Process Queue</strong> will create Gmail drafts for all pending items.
+              You'll see a confirmation prompt before anything is sent. Drafts will appear in your Gmail Drafts folder for review.
+            </div>
+            <button
+              onClick={() => processQueueMutation.mutate()}
+              disabled={processQueueMutation.isPending || (queueStats?.pending ?? 0) === 0}
+              style={{
+                background: (queueStats?.pending ?? 0) === 0 ? "#111" : "rgba(200,16,46,0.15)",
+                border: `1px solid ${(queueStats?.pending ?? 0) === 0 ? "#1a1a1a" : "#C8102E"}`,
+                borderRadius: "6px",
+                padding: "10px 20px",
+                color: (queueStats?.pending ?? 0) === 0 ? "#333" : "#C8102E",
+                cursor: (queueStats?.pending ?? 0) === 0 ? "not-allowed" : "pointer",
+                fontFamily: "'Bebas Neue', sans-serif",
+                letterSpacing: "0.05em",
+                fontSize: "0.9rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <Mail size={14} />
+              {processQueueMutation.isPending ? "Processing..." : `Process Queue (${queueStats?.pending ?? 0} pending)`}
+            </button>
+          </div>
+
+          {/* Webhook URLs for n8n setup */}
+          <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: "8px", padding: "16px" }}>
+            <div style={{ fontSize: "0.7rem", color: "#555", letterSpacing: "0.08em", marginBottom: "10px" }}>WEBHOOK ENDPOINTS (for n8n)</div>
+            {[
+              { label: "Typeform Inquiry", url: "/api/webhooks/typeform", method: "POST" },
+              { label: "Appstle Events", url: "/api/webhooks/appstle", method: "POST" },
+              { label: "Morning Briefing", url: "/api/webhooks/morning-briefing", method: "POST" },
+            ].map(wh => (
+              <div key={wh.label} style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                <span style={{ fontSize: "0.65rem", background: "rgba(200,16,46,0.1)", color: "#C8102E", padding: "1px 5px", borderRadius: "3px", fontFamily: "monospace" }}>{wh.method}</span>
+                <span style={{ fontSize: "0.75rem", color: "#888" }}>{wh.label}</span>
+                <code style={{ fontSize: "0.7rem", color: "#D4AF37", fontFamily: "monospace" }}>{window.location.origin}{wh.url}</code>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Category filters + split pane — only shown in inbox tab */}
+      {activeTab === "inbox" && <>
       <div className="flex flex-wrap gap-2">
         {["All", "inquiry", "renewal", "issue", "event"].map((cat) => {
           const cfg = cat === "All" ? null : CATEGORY_CONFIG[cat as EmailCategory];
@@ -361,6 +486,8 @@ export default function EmailHub() {
           )}
         </div>
       </div>
+      </>
+      }
     </div>
   );
 }

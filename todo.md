@@ -17,8 +17,8 @@
 - [x] TypeScript clean (0 errors), tests passing
 
 ## In Progress / Next
-- [ ] Morning Briefing — scheduled daily 8 AM summary email
-- [ ] Typeform webhook — auto-populate prospects from inquiry form
+- [x] Morning Briefing — scheduled daily 8 AM summary email
+- [x] Typeform webhook — auto-populate prospects from inquiry form
 - [ ] Appstle/Shopify live member sync via API
 - [x] Lightspeed R-Series OAuth integration — routes, token storage, DB schema
 - [ ] Lightspeed OAuth authorization — complete connect flow via published domain
@@ -29,7 +29,7 @@
 - [ ] Power Rankings — auto-score from real visit/spend/tenure/referral data
 - [ ] Missed payment automation — Appstle webhook → auto email sequence
 - [ ] Prospect identification from Lightspeed POS — frequent visitors not yet members
-- [ ] Locker Diagram — populate from real member locker assignments
+- [x] Locker Diagram — populate from real member locker assignments (3 banks: APEX, Atabey, Visionary)
 - [ ] Strategy page — wire to live member growth metrics
 
 ## Backlog
@@ -41,10 +41,10 @@
 - [ ] Commission plan tracker for staff
 
 ## Overnight Build Queue (Wave 1-15)
-- [ ] Wave 1: Payment failure auto-email on Attempt 1
-- [ ] Wave 1: Payment failure draft email on Attempt 3 (Gmail draft)
-- [ ] Wave 1: Attempt 5-6 push notification with member phone number
-- [ ] Wave 1b: New member welcome email automation
+- [x] Wave 1: Payment failure auto-email on Attempt 1
+- [x] Wave 1: Payment failure draft email on Attempt 3 (Gmail draft)
+- [x] Wave 1: Attempt 5-6 push notification with member phone number
+- [x] Wave 1b: New member welcome email automation
 - [x] Wave 2: Dashboard — full live data wiring (KPIs, tier breakdown, renewals)
 - [x] Wave 2: Members page — dunning flags, paused duration, sync button live
 - [x] Wave 2: Power Rankings — real scores from DB

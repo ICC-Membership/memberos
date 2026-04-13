@@ -12,6 +12,7 @@ import { fetchAppstleMembers } from "../appstle";
 import { upsertMember } from "../db";
 import { notifyOwner } from "./notification";
 import { runPaymentAutomation, queueWelcomeEmail } from "../paymentAutomation";
+import { registerWebhookRoutes } from "../webhooks";
 
 // ─── Auto-sync Appstle members to DB ────────────────────────────────────────
 async function runAppstleSync(notifyOnIssues = false) {
@@ -110,6 +111,7 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Lightspeed R-Series OAuth routes
   registerLightspeedRoutes(app);
+  registerWebhookRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
