@@ -23,6 +23,14 @@
 - [x] Lightspeed R-Series OAuth integration — routes, token storage, DB schema
 - [ ] Lightspeed OAuth authorization — complete connect flow via published domain
 - [ ] Lightspeed data sync — customers, sales, visit frequency per member
+- [ ] Full site audit — identify all hardcoded vs. live data
+- [ ] Dashboard — wire all KPIs to live Appstle data (member count, MRR, failed payments)
+- [ ] Members page — live sync from Appstle with status, tier, rate, paused/failed flags
+- [ ] Power Rankings — auto-score from real visit/spend/tenure/referral data
+- [ ] Missed payment automation — Appstle webhook → auto email sequence
+- [ ] Prospect identification from Lightspeed POS — frequent visitors not yet members
+- [ ] Locker Diagram — populate from real member locker assignments
+- [ ] Strategy page — wire to live member growth metrics
 
 ## Backlog
 - [ ] Typeform inquiry feed in Email Hub
@@ -31,3 +39,43 @@
 - [ ] Power Rankings auto-scoring from real data
 - [ ] Locker Diagram populated with real member assignments
 - [ ] Commission plan tracker for staff
+
+## Overnight Build Queue (Wave 1-15)
+- [ ] Wave 1: Payment failure auto-email on Attempt 1
+- [ ] Wave 1: Payment failure draft email on Attempt 3 (Gmail draft)
+- [ ] Wave 1: Attempt 5-6 push notification with member phone number
+- [ ] Wave 1b: New member welcome email automation
+- [x] Wave 2: Dashboard — full live data wiring (KPIs, tier breakdown, renewals)
+- [x] Wave 2: Members page — dunning flags, paused duration, sync button live
+- [x] Wave 2: Power Rankings — real scores from DB
+- [x] Wave 2b: Locker Diagram — wire to real member assignments from DB
+- [x] Wave 11: APEX quarterly review scaffold — auto-rank Atabey by Power Score
+- [x] Wave 12: Win-back draft queue — HIGH priority cancelled members auto-drafted weekly
+- [ ] Wave 15: Lit-Ventures deal intake form + AI deal memo template
+
+## New Features Requested
+- [x] Member 360 Profile page — full view per member: tier, locker, visit history, spend, scores, notes, payment status
+- [ ] SALTO door access integration — track member entries/exits, visit frequency, last seen date
+- [ ] Toast POS integration — cross-reference bar/restaurant spend by phone number to member profile
+- [x] Staff Commission Tracker — track referrals, commissions earned, payout history per staff member
+- [ ] Remind user to answer 4 open questions: locker layout, commission plan, ICC email address, publish site for Lightspeed
+
+## Commission Structure (from training deck)
+### Quarterly Bonus Pool
+- Add 20 members/qtr: 1st $750, 2nd $375, 3rd $150
+- Add 30 members/qtr: 1st $1,000, 2nd $500, 3rd $150
+
+### End of Year Bonus Pool
+- 200-215 members: 1st $5,000, 2nd $2,000, 3rd $350
+- 216-230 members: 1st $7,500, 2nd $3,500, 3rd $700
+- 231-255 members: 1st $10,000, 2nd $5,000, 3rd $1,200
+
+### Tracking
+- Each staff member has a personalized QR code
+- Sign-ups through QR code = initiation fee waived
+- Leaderboard updated weekly
+- Tours must be logged with Andrew
+
+## Email Config
+- ICC sending address: andrew@industrialcigars.com
+- Members contact: members@industrialcigars.com

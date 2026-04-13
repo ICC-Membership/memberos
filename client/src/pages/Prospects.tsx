@@ -2,7 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import { Users, Plus, Edit2, Phone, Mail, ChevronRight } from "lucide-react";
+import { Users, Plus, Edit2, Phone, Mail, ChevronRight, Zap, UserPlus, RefreshCw } from "lucide-react";
 
 const STATUSES = ["New", "Contacted", "Tour Scheduled", "Proposal Sent", "Closed Won", "Closed Lost"] as const;
 const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
@@ -34,7 +34,13 @@ export default function Prospects() {
   const [form, setForm] = useState({ ...defaultForm });
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
+  const [showLightspeed, setShowLightspeed] = useState(false);
   const { data: prospects = [], refetch } = trpc.prospects.list.useQuery();
+  const { data: lsStatus } = trpc.lightspeed.status.useQuery();
+  const { data: lsProspects, isLoading: lsLoading, refetch: refetchLs } = trpc.lightspeed.prospects.useQuery(
+    { minVisits: 3 },
+    { enabled: showLightspeed && !!lsStatus?.connected }
+  );
   const upsertProspect = trpc.prospects.upsert.useMutation({
     onSuccess: () => { refetch(); setShowForm(false); setForm({ ...defaultForm }); toast.success("Prospect saved"); },
     onError: () => toast.error("Failed to save prospect"),
@@ -141,6 +147,84 @@ export default function Prospects() {
           </table>
         </div>
       )}
+
+      {/* Lightspeed Prospect Finder */}
+      <div style={{ marginTop: "2rem", borderTop: "1px solid rgba(245,240,235,0.08)", paddingTop: "1.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <Zap size={16} color="#C4A35A" />
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1rem", letterSpacing: "0.08em", color: "#E8E4DC" }}>LIGHTSPEED PROSPECT FINDER</span>
+            {lsStatus?.connected && <span style={{ fontSize: "0.65rem", padding: "0.15rem 0.4rem", borderRadius: "0.2rem", background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>CONNECTED</span>}
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            {lsStatus?.connected && showLightspeed && (
+              <button onClick={() => refetchLs()} style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.35rem 0.75rem", borderRadius: "0.25rem", background: "transparent", color: "#6B6560", border: "1px solid rgba(245,240,235,0.12)", cursor: "pointer", fontSize: "0.75rem" }}>
+                <RefreshCw size={12} /> Refresh
+              </button>
+            )}
+            <button
+              onClick={() => setShowLightspeed(v => !v)}
+              style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.35rem 0.75rem", borderRadius: "0.25rem", background: showLightspeed ? "rgba(196,163,90,0.15)" : "transparent", color: "#C4A35A", border: "1px solid rgba(196,163,90,0.3)", cursor: "pointer", fontSize: "0.75rem" }}
+            >
+              {showLightspeed ? "Hide" : "Find Prospects from POS"}
+            </button>
+          </div>
+        </div>
+        {showLightspeed && (
+          !lsStatus?.connected ? (
+            <div style={{ padding: "2rem", textAlign: "center", background: "rgba(245,240,235,0.03)", borderRadius: "0.5rem", border: "1px dashed rgba(196,163,90,0.25)" }}>
+              <Zap size={24} style={{ color: "#C4A35A", marginBottom: "0.75rem", opacity: 0.5 }} />
+              <p style={{ color: "#6B6560", fontSize: "0.85rem", marginBottom: "0.75rem" }}>Connect Lightspeed to automatically identify frequent POS visitors who aren't members yet.</p>
+              <a href="/api/lightspeed/connect" style={{ padding: "0.5rem 1.25rem", borderRadius: "0.25rem", background: "#C4A35A", color: "#0A0A0A", fontSize: "0.82rem", fontWeight: 600, textDecoration: "none" }}>Connect Lightspeed →</a>
+            </div>
+          ) : lsLoading ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem", gap: "0.75rem", color: "#6B6560" }}>
+              <RefreshCw size={16} className="animate-spin" />
+              <span style={{ fontSize: "0.82rem" }}>Scanning POS data for frequent visitors not yet members...</span>
+            </div>
+          ) : (lsProspects?.prospects || []).length === 0 ? (
+            <div style={{ textAlign: "center", padding: "2rem", color: "#6B6560", fontSize: "0.82rem" }}>No frequent visitors found who aren't already members. Try lowering the minimum visits threshold.</div>
+          ) : (
+            <div style={{ background: "#1A1614", border: "1px solid rgba(196,163,90,0.2)", borderRadius: "0.5rem", overflow: "hidden" }}>
+              <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid rgba(245,240,235,0.06)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span style={{ color: "#C4A35A", fontSize: "0.78rem", fontWeight: 600 }}>{(lsProspects?.prospects || []).length} frequent visitors found — not yet members</span>
+                <span style={{ color: "#6B6560", fontSize: "0.72rem" }}>(3+ visits in last 90 days)</span>
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid rgba(245,240,235,0.06)" }}>
+                    {["Name", "Email", "Visits (90d)", "Spend (90d)", "Last Visit", ""].map(h => (
+                      <th key={h} style={{ padding: "0.6rem 1rem", textAlign: "left", color: "#6B6560", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.06em" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(lsProspects?.prospects || []).map((p: any, i: number) => (
+                    <tr key={i} style={{ borderBottom: "1px solid rgba(245,240,235,0.04)" }}>
+                      <td style={{ padding: "0.75rem 1rem", color: "#E8E4DC", fontSize: "0.85rem", fontWeight: 600 }}>{p.name}</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#6B6560", fontSize: "0.78rem" }}>{p.email || "—"}</td>
+                      <td style={{ padding: "0.75rem 1rem" }}><span style={{ color: "#C4A35A", fontWeight: 700, fontSize: "0.9rem" }}>{p.visits}</span></td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#22c55e", fontSize: "0.82rem" }}>${p.spend.toFixed(0)}</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#6B6560", fontSize: "0.75rem" }}>{new Date(p.lastVisit).toLocaleDateString()}</td>
+                      <td style={{ padding: "0.75rem 1rem" }}>
+                        <button
+                          onClick={() => {
+                            setForm({ ...defaultForm, name: p.name, email: p.email || "", phone: p.phone || "", source: "Walk-in", notes: `${p.visits} visits in last 90 days · $${p.spend.toFixed(0)} spend` });
+                            setShowForm(true);
+                          }}
+                          style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.3rem 0.6rem", borderRadius: "0.2rem", background: "rgba(200,16,46,0.12)", color: "#C8102E", border: "1px solid rgba(200,16,46,0.25)", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600 }}
+                        >
+                          <UserPlus size={11} /> Add to Pipeline
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </div>
 
       {/* Add/Edit Modal */}
       {showForm && (

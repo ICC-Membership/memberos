@@ -1,4 +1,4 @@
-import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar, float } from "drizzle-orm/mysql-core";
+import { boolean, decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar, float } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -128,3 +128,86 @@ export const integrationTokens = mysqlTable("integrationTokens", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type IntegrationToken = typeof integrationTokens.$inferSelect;
+
+// ─── Email Draft Queue (payment automation, win-back, welcome) ───────────────
+export const emailDraftQueue = mysqlTable("emailDraftQueue", {
+  id: int("id").autoincrement().primaryKey(),
+  toEmail: varchar("toEmail", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  body: text("body").notNull(),
+  type: varchar("type", { length: 100 }).notNull(), // payment_recovery_draft | welcome_email | winback_draft
+  memberName: varchar("memberName", { length: 255 }),
+  tier: varchar("tier", { length: 50 }),
+  contractId: int("contractId"),
+  phone: varchar("phone", { length: 50 }),
+  monthlyRate: float("monthlyRate"),
+  status: varchar("status", { length: 50 }).notNull().default("pending"), // pending | drafted | sent | failed
+  processedAt: timestamp("processedAt"),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+export type EmailDraftQueueItem = typeof emailDraftQueue.$inferSelect;
+export type InsertEmailDraftQueueItem = typeof emailDraftQueue.$inferInsert;
+
+// ─── Staff Members ────────────────────────────────────────────────────────────
+export const staff = mysqlTable("staff", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  referralCode: varchar("referralCode", { length: 64 }).unique(),
+  shopifyUrl: varchar("shopifyUrl", { length: 1024 }),
+  email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 32 }),
+  role: varchar("role", { length: 128 }), // bartender, floor, manager, etc.
+  isActive: boolean("isActive").default(true).notNull(),
+  // Commission tracking
+  toursGivenAllTime: int("toursGivenAllTime").default(0),
+  toursGivenQtr: int("toursGivenQtr").default(0),
+  closedAllTime: int("closedAllTime").default(0),
+  closedQtr: int("closedQtr").default(0),
+  closedYTD: int("closedYTD").default(0),
+  currentRank: int("currentRank"),
+  bonusEligibleQtr: boolean("bonusEligibleQtr").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Staff = typeof staff.$inferSelect;
+export type InsertStaff = typeof staff.$inferInsert;
+
+// ─── Tour Logs ────────────────────────────────────────────────────────────────
+export const tourLogs = mysqlTable("tourLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  staffId: int("staffId"), // FK to staff.id
+  staffName: varchar("staffName", { length: 255 }),
+  prospectFirstName: varchar("prospectFirstName", { length: 128 }),
+  prospectLastName: varchar("prospectLastName", { length: 128 }),
+  prospectEmail: varchar("prospectEmail", { length: 320 }),
+  prospectPhone: varchar("prospectPhone", { length: 32 }),
+  cameWithGroup: boolean("cameWithGroup").default(false),
+  interestedTier: mysqlEnum("interestedTier", ["Visionary", "Atabey", "APEX"]),
+  converted: boolean("converted").default(false), // did they become a member?
+  memberId: int("memberId"), // FK to members.id if converted
+  notes: text("notes"),
+  tourDate: timestamp("tourDate").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type TourLog = typeof tourLogs.$inferSelect;
+export type InsertTourLog = typeof tourLogs.$inferInsert;
+
+// ─── Locker Assignments ───────────────────────────────────────────────────────
+export const lockers = mysqlTable("lockers", {
+  id: int("id").autoincrement().primaryKey(),
+  lockerNumber: varchar("lockerNumber", { length: 16 }).notNull().unique(),
+  section: varchar("section", { length: 32 }), // e.g. "A", "B", "VIP"
+  row: int("row"),
+  col: int("col"),
+  memberId: int("memberId"), // FK to members.id — null if unassigned
+  memberName: varchar("memberName", { length: 255 }),
+  tier: mysqlEnum("tier", ["Visionary", "Atabey", "APEX"]),
+  assignedAt: timestamp("assignedAt"),
+  notes: text("notes"),
+  isAvailable: boolean("isAvailable").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Locker = typeof lockers.$inferSelect;
+export type InsertLocker = typeof lockers.$inferInsert;

@@ -16,6 +16,10 @@ import Rocks from "./pages/Rocks";
 import MeetingNotes from "./pages/MeetingNotes";
 import Prospects from "./pages/Prospects";
 import NotFound from "./pages/NotFound";
+import CommissionTracker from "./pages/CommissionTracker";
+import Member360 from "./pages/Member360";
+import WinBack from "./pages/WinBack";
+import ApexReview from "./pages/ApexReview";
 
 function Router() {
   return (
@@ -32,6 +36,10 @@ function Router() {
         <Route path="/growth-engine" component={GrowthEngine} />
         <Route path="/strategy" component={Strategy} />
         <Route path="/training" component={Training} />
+        <Route path="/commission" component={CommissionTracker} />
+        <Route path="/member360" component={Member360} />
+        <Route path="/win-back" component={WinBack} />
+        <Route path="/apex-review" component={ApexReview} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>

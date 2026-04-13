@@ -22,6 +22,20 @@
       "when": 1775522861820,
       "tag": "0002_smiling_sue_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1775533484283,
+      "tag": "0003_chemical_doorman",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1776096641299,
+      "tag": "0004_free_goliath",
+      "breakpoints": true
     }
   ]
 }

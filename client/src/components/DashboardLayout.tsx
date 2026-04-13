@@ -11,6 +11,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
   Users,
+  User,
   Trophy,
   Grid3X3,
   Mail,
@@ -24,6 +25,9 @@ import {
   Target,
   UserPlus,
   FileText,
+  DollarSign,
+  RotateCcw,
+  Crown,
 } from "lucide-react";
 
 const ICC_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663388846002/JxsvGXqZ8SL52kxCjJkGqG/icc-logo_4d91d6f7.png";
@@ -31,14 +35,18 @@ const ICC_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663388846002/JxsvG
 const NAV_ITEMS = [
   { href: "/", icon: LayoutDashboard, label: "Command Center" },
   { href: "/members", icon: Users, label: "Members" },
+  { href: "/member360", icon: User, label: "Member 360" },
   { href: "/prospects", icon: UserPlus, label: "Prospects" },
   { href: "/power-rankings", icon: Trophy, label: "Power Rankings" },
+  { href: "/apex-review", icon: Crown, label: "APEX Review" },
+  { href: "/win-back", icon: RotateCcw, label: "Win-Back Queue" },
   { href: "/lockers", icon: Grid3X3, label: "Locker Diagram" },
   { href: "/email", icon: Mail, label: "Email Hub" },
   { href: "/rocks", icon: Target, label: "EOS Rocks" },
   { href: "/meeting-notes", icon: FileText, label: "L10 Notes" },
   { href: "/growth-engine", icon: Zap, label: "Growth Engine" },
   { href: "/strategy", icon: TrendingUp, label: "Strategy" },
+  { href: "/commission", icon: DollarSign, label: "Commission" },
   { href: "/training", icon: BookOpen, label: "Training" },
 ];
 

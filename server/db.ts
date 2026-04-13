@@ -112,10 +112,30 @@ export async function getMemberById(id: number) {
 export async function upsertMember(member: InsertMember) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
+
+  // If we have an id, update directly
   if (member.id) {
     await db.update(members).set({ ...member, updatedAt: new Date() }).where(eq(members.id, member.id));
     return member.id;
   }
+
+  // If we have an externalId, try to find existing record first
+  if (member.externalId) {
+    const existing = await db.select({ id: members.id })
+      .from(members)
+      .where(eq(members.externalId, member.externalId))
+      .limit(1);
+    if (existing.length > 0) {
+      const existingId = existing[0].id;
+      const { id: _id, externalId: _eid, createdAt: _ca, ...updateFields } = member as any;
+      await db.update(members)
+        .set({ ...updateFields, updatedAt: new Date() })
+        .where(eq(members.id, existingId));
+      return existingId;
+    }
+  }
+
+  // Otherwise insert new
   const result = await db.insert(members).values(member);
   return (result[0] as any).insertId as number;
 }

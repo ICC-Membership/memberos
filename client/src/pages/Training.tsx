@@ -19,42 +19,42 @@ const COMMISSION_TIERS = [
 const SALES_STEPS = [
   {
     step: 1,
-    title: "The Welcome",
-    script: "Welcome to Industrial Cigar Company. My name is [Name] — have you been in before? [If no] Let me show you around — we have something pretty special here.",
-    tip: "Make eye contact, smile, and slow down. First impressions set the tone for the entire membership conversation.",
+    title: "Identify the Signal",
+    script: "[Internal] Look for: visits 3+ times/month, spends $100+ per visit, asks questions about the lounge or community, brings guests or talks about entertaining.",
+    tip: "You are not a salesperson. You are a curator. Identify the right people, create the right moment, and make the invitation feel earned — not pushed.",
   },
   {
     step: 2,
-    title: "The Discovery",
-    script: "What brings you in today? Are you a cigar enthusiast, or is this your first time exploring the world of premium cigars? [Listen actively — find their 'why']",
-    tip: "The goal here is to understand what they value: community, exclusivity, business networking, relaxation, or the product itself.",
+    title: "The High-Spender Hook",
+    script: "'Have you seen the back lounges yet? Let me show you something.' [Walk them to Atabey]",
+    tip: "Lead with the experience, not the features. The Bottle Concierge is your most powerful closing tool for whiskey drinkers.",
   },
   {
     step: 3,
-    title: "The Tour",
-    script: "Let me show you the lounge. This is our main floor — we have [describe current setup]. And back here is our APEX private lounge, which is exclusively for our top-tier members.",
-    tip: "Always show the APEX lounge even to Visionary prospects. Aspiration sells upgrades.",
+    title: "Sell the Network, Not the Room",
+    script: "[Walk through Atabey] Don't just point at lockers — point out who is in the room. Sell the exclusivity and the caliber of people they will meet.",
+    tip: "Stop talking when you walk them in. Let them feel it. Then say: 'This is what membership looks like.'",
   },
   {
     step: 4,
-    title: "The Presentation",
-    script: "We have three membership tiers. Our Visionary membership is $49/month — full lounge access, member pricing, and invitations to our events. Our Atabey tier is $125/month and adds a dedicated locker and priority access. Our APEX membership at $215/month is our most exclusive — private lounge, concierge service, and all events.",
-    tip: "Present all three tiers every time. Let them self-select. Never assume they can't afford APEX.",
+    title: "The Handoff",
+    script: "'Let me introduce you to Andrew before you leave.' [Introduce to Drew or a key member in the lounge]",
+    tip: "Let the community sell itself. A warm handoff to Drew or a respected member closes more deals than any pitch.",
   },
   {
     step: 5,
-    title: "The Close",
-    script: "Based on what you've told me, I think [tier] would be a great fit for you. We can get you set up today — it takes about 5 minutes. Which card would you like to use?",
-    tip: "Ask for the sale directly. Hesitation here costs memberships. If they say 'let me think about it' — get their contact info and follow up within 24 hours.",
+    title: "The Log & The Close",
+    script: "'I'd like to personally invite you to become a member. I can walk you through it right now.' [Use your QR code card — initiation fee waived]",
+    tip: "Log the tour with Andrew immediately. Present membership as an invitation to join the club, not a discount program. Ask for the sale directly.",
   },
 ];
 
 const MEMBERSHIP_BENEFITS = [
   {
     benefit: "Lounge Access",
-    visionary: "Full access during open hours",
-    atabey: "Full access + priority seating",
-    apex: "Full access + private APEX lounge",
+    visionary: "Dreamer Lounge",
+    atabey: "Atabey Private Lounge",
+    apex: "Full ICC Access",
   },
   {
     benefit: "Member Pricing",
@@ -70,19 +70,19 @@ const MEMBERSHIP_BENEFITS = [
   },
   {
     benefit: "Events",
-    visionary: "Member events",
-    atabey: "All member events + priority",
-    apex: "All events + APEX exclusive events",
+    visionary: "Discounts & Events",
+    atabey: "All member events",
+    apex: "Complimentary Events",
   },
   {
     benefit: "Guests",
-    visionary: "1 guest per visit",
-    atabey: "2 guests per visit",
-    apex: "4 guests + APEX guest access",
+    visionary: "1 guest pass / quarter",
+    atabey: "3 guest passes / month",
+    apex: "Unlimited + APEX guest access",
   },
   {
     benefit: "Monthly Dues",
-    visionary: "$49/month",
+    visionary: "$59/month",
     atabey: "$125/month",
     apex: "$215/month",
   },
@@ -91,6 +91,31 @@ const MEMBERSHIP_BENEFITS = [
     visionary: "$100",
     atabey: "$500",
     apex: "$1,000",
+  },
+];
+
+const OBJECTIONS = [
+  { objection: "It's too expensive.", response: "You're not paying for cigars. You're paying for access, experience, and the people in it." },
+  { objection: "I'll think about it.", response: "Take your time. Let me introduce you to Andrew before you leave." },
+  { objection: "I'm not here enough.", response: "It's about having the right place when you do need it — for a client meeting or just to escape." },
+  { objection: "I don't need a locker.", response: "The locker is just a perk. The real value is Atabey access and the community." },
+];
+
+const WEAPONS = [
+  {
+    name: "QR Code Card",
+    description: "Each staff member has a personalized QR code. When someone signs up through your link, the initiation fee is automatically waived. That's your closing gift.",
+    url: "https://industrialcigars.co/pages/membership-at-icc",
+  },
+  {
+    name: "Bottle Concierge Menu",
+    description: "Hand this to anyone ordering a premium pour. It shows the allocated bottles only available to Atabey and APEX members.",
+    url: null,
+  },
+  {
+    name: "The Verbal Invite",
+    description: "'I'd like to personally invite you to become a member. I can walk you through it right now.'",
+    url: null,
   },
 ];
 
@@ -206,6 +231,54 @@ export default function Training() {
               </div>
             </div>
           ))}
+        </div>
+      </CollapsibleSection>
+
+      {/* Objection Handling */}
+      <CollapsibleSection title="Handling Objections Like a Pro" icon={FileText} defaultOpen={false}>
+        <div className="space-y-3">
+          {OBJECTIONS.map((o, i) => (
+            <div key={i} className="p-4 rounded-lg flex gap-4" style={{ background: "#161616" }}>
+              <div className="flex-shrink-0">
+                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.2rem", color: "#C8102E", lineHeight: 1 }}>0{i + 1}</span>
+              </div>
+              <div>
+                <p className="text-xs font-semibold mb-1" style={{ color: "#6B6560" }}>THEY SAY: "{o.objection}"</p>
+                <p className="text-xs leading-relaxed" style={{ color: "#E8E4DC", borderLeft: "2px solid #C4A35A", paddingLeft: "10px" }}>
+                  "{o.response}"
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CollapsibleSection>
+
+      {/* Your Weapons */}
+      <CollapsibleSection title="Your Weapons" icon={Award} defaultOpen={false}>
+        <div className="space-y-3">
+          {WEAPONS.map((w, i) => (
+            <div key={i} className="p-4 rounded-lg" style={{ background: "#161616" }}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold" style={{ fontFamily: "'Bebas Neue', sans-serif", color: "#E8E4DC" }}>{w.name}</p>
+                {w.url && (
+                  <a href={w.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.65rem", color: "#C8102E" }}>
+                    View ↗
+                  </a>
+                )}
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: "#A09A94" }}>{w.description}</p>
+            </div>
+          ))}
+          <div className="p-3 rounded-lg" style={{ background: "#0A0A0A", border: "1px solid #2A2A2A" }}>
+            <p className="text-xs font-semibold mb-1" style={{ color: "#C4A35A" }}>Referral Activation</p>
+            <p className="text-xs leading-relaxed" style={{ color: "#6B6560" }}>
+              Remind current Atabey and APEX members they can refer new members and earn free months of membership.
+            </p>
+            <a href="https://industrialcigars.co/blogs/news/member-referral-program" target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: "0.68rem", color: "#C8102E", display: "block", marginTop: "0.5rem" }}>
+              industrialcigars.co/blogs/news/member-referral-program ↗
+            </a>
+          </div>
         </div>
       </CollapsibleSection>
 

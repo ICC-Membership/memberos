@@ -1,9 +1,14 @@
 import { z } from "zod";
+import { eq, desc, sql } from "drizzle-orm";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
+import { fetchAppstleMembers, getAppstleHealthStats } from "./appstle";
+import { getLightspeedToken, getLightspeedCustomers, getLightspeedSales } from "./lightspeed";
+import { getQueueStats } from "./emailQueue";
+import { getDb } from "./db";
 import {
   getAllMembers, getMemberById, upsertMember, deleteMember, getMemberStats,
   getAllRocks, upsertRock, deleteRock,
@@ -238,102 +243,374 @@ Write a warm, professional reply. Keep it concise and helpful.`,
   }),
 
   shopify: router({
-    // Fetch live member/subscription data from Shopify using client credentials
+    // Sync all members from Appstle subscription contracts into the local DB
     syncMembers: protectedProcedure.mutation(async () => {
-      const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
-      const clientId = process.env.SHOPIFY_CLIENT_ID;
-      const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
-
-      if (!storeDomain || !clientId || !clientSecret) {
-        throw new Error("Shopify credentials not configured");
-      }
-
-      // Get a fresh access token using client credentials
-      const tokenRes = await fetch(`https://${storeDomain}/admin/oauth/access_token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, grant_type: "client_credentials" }),
-      });
-      const tokenData = await tokenRes.json() as { access_token?: string };
-      const accessToken = tokenData.access_token;
-      if (!accessToken) throw new Error("Failed to get Shopify access token");
-
-      // Fetch customers with membership tags
-      const customersRes = await fetch(
-        `https://${storeDomain}/admin/api/2026-04/customers.json?limit=250&fields=id,first_name,last_name,email,phone,tags,created_at,note`,
-        { headers: { "X-Shopify-Access-Token": accessToken } }
-      );
-      const customersData = await customersRes.json() as { customers?: any[] };
-      const customers = customersData.customers || [];
-
-      // Filter to only customers with membership-related tags
-      const memberTierMap: Record<string, string> = {
-        "apex": "APEX",
-        "atabey": "Atabey",
-        "visionary": "Visionary",
-        "member": "Visionary",
-      };
-
+      const appstleMembers = await fetchAppstleMembers();
       let synced = 0;
-      for (const c of customers) {
-        const tags: string[] = (c.tags || "").toLowerCase().split(",").map((t: string) => t.trim());
-        let tier: string | undefined;
-        for (const tag of tags) {
-          for (const [key, val] of Object.entries(memberTierMap)) {
-            if (tag.includes(key)) { tier = val; break; }
-          }
-          if (tier) break;
-        }
-        if (!tier) continue; // skip non-members
-
+      for (const m of appstleMembers) {
         await upsertMember({
-          externalId: String(c.id),
-          name: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unknown",
-          email: c.email || undefined,
-          phone: c.phone || undefined,
-          tier: tier as any,
-          status: "Active",
-          notes: c.note || undefined,
-          joinedAt: c.created_at ? new Date(c.created_at) : undefined,
+          externalId: m.externalId,
+          name: m.name,
+          email: m.email || undefined,
+          phone: m.phone,
+          tier: m.tier,
+          status: m.status,
+          monthlyRate: m.monthlyRate,
+          joinedAt: m.joinedAt,
+          renewalDate: m.nextBillingDate,
+          notes: m.dunning ? "Payment issue - dunning active" : undefined,
         });
         synced++;
       }
-      return { synced, total: customers.length };
+      return { synced, total: appstleMembers.length };
     }),
-
+    // Live stats direct from Appstle (no DB needed - always fresh)
     liveStats: publicProcedure.query(async () => {
-      const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
-      const clientId = process.env.SHOPIFY_CLIENT_ID;
-      const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
-      if (!storeDomain || !clientId || !clientSecret) return null;
-
       try {
-        const tokenRes = await fetch(`https://${storeDomain}/admin/oauth/access_token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, grant_type: "client_credentials" }),
-        });
-        const tokenData = await tokenRes.json() as { access_token?: string };
-        const accessToken = tokenData.access_token;
-        if (!accessToken) return null;
-
-        // Get customer count
-        const countRes = await fetch(
-          `https://${storeDomain}/admin/api/2026-04/customers/count.json`,
-          { headers: { "X-Shopify-Access-Token": accessToken } }
-        );
-        const countData = await countRes.json() as { count?: number };
-
-        return {
-          totalCustomers: countData.count || 0,
-          storeDomain,
-          lastSynced: new Date(),
-        };
+        return await getAppstleHealthStats();
       } catch (e) {
-        console.error("Shopify liveStats error:", e);
+        console.error("Appstle liveStats error:", e);
         return null;
       }
     }),
+    // Full member health data from Appstle for the members page
+    healthData: publicProcedure.query(async () => {
+      try {
+        return await fetchAppstleMembers();
+      } catch (e) {
+        console.error("Appstle healthData error:", e);
+        return [];
+      }
+    }),
+  }),
+
+  lightspeed: router({
+    // Check if Lightspeed is connected
+    status: publicProcedure.query(async () => {
+      const token = await getLightspeedToken();
+      return { connected: !!token, accountId: token?.accountId || null };
+    }),
+    // Identify prospects from Lightspeed POS — frequent visitors not yet members
+    prospects: protectedProcedure
+      .input(z.object({ minVisits: z.number().default(3) }))
+      .query(async ({ input }) => {
+        const token = await getLightspeedToken();
+        if (!token) return { connected: false, prospects: [] };
+        try {
+          // Get all Lightspeed customers
+          const lsCustomers = await getLightspeedCustomers();
+          // Get current member emails for cross-reference
+          const currentMembers = await getAllMembers();
+          const memberEmails = new Set(currentMembers.map((m: any) => (m.email || "").toLowerCase()));
+          // Get recent sales (last 90 days) to calculate visit frequency
+          const since90 = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+          const recentSales = await getLightspeedSales(since90);
+          // Aggregate visits and spend per customer
+          const customerStats: Record<string, { name: string; email: string; phone: string; visits: number; spend: number; lastVisit: Date }> = {};
+          for (const sale of recentSales) {
+            const cid = sale.customerID;
+            if (!cid || cid === "0") continue;
+            if (!customerStats[cid]) {
+              const customer = lsCustomers.find((c: any) => c.customerID === cid);
+              if (!customer) continue;
+              const email = customer.Contact?.Emails?.ContactEmail?.[0]?.address || customer.Contact?.Emails?.ContactEmail?.address || "";
+              const firstName = customer.firstName || "";
+              const lastName = customer.lastName || "";
+              customerStats[cid] = { name: `${firstName} ${lastName}`.trim() || "Unknown", email, phone: customer.Contact?.Phones?.ContactPhone?.[0]?.number || "", visits: 0, spend: 0, lastVisit: new Date(0) };
+            }
+            customerStats[cid].visits++;
+            customerStats[cid].spend += parseFloat(sale.calcTotal || "0");
+            const saleDate = new Date(sale.timeStamp);
+            if (saleDate > customerStats[cid].lastVisit) customerStats[cid].lastVisit = saleDate;
+          }
+          // Filter: frequent visitors not already members
+          const prospects = Object.values(customerStats)
+            .filter(c => c.visits >= input.minVisits && c.email && !memberEmails.has(c.email.toLowerCase()))
+            .sort((a, b) => b.visits - a.visits)
+            .slice(0, 50)
+            .map(c => ({ ...c, lastVisit: c.lastVisit.toISOString() }));
+          return { connected: true, prospects };
+        } catch (e) {
+          console.error("Lightspeed prospects error:", e);
+          return { connected: true, prospects: [], error: String(e) };
+        }
+      }),
+  }),
+
+  emailAutomation: router({
+    // Get current email draft queue status
+    queueStats: protectedProcedure.query(async () => {
+      return getQueueStats();
+    }),
+    // Manually trigger queue processing (creates Gmail drafts)
+    processQueue: protectedProcedure.mutation(async () => {
+      return { processed: 0, message: "Queue processing handled by agent scheduler" };
+    }),
+    // Get all dunning members for the admin UI
+    dunningMembers: publicProcedure.query(async () => {
+      const stats = await getAppstleHealthStats();
+      const allMembers = await fetchAppstleMembers();
+      const dunning = allMembers
+        .filter(m => m.dunning && m.status === 'Active')
+        .map(m => ({
+          name: m.name,
+          email: m.email,
+          phone: m.phone,
+          tier: m.tier,
+          monthlyRate: m.monthlyRate,
+          contractId: m.appstleContractId,
+        }));
+      return { dunning, total: dunning.length };
+    }),
+  }),
+
+  winback: router({
+    // Get HIGH priority win-back candidates from cancelled/paused members
+    candidates: protectedProcedure.query(async () => {
+      const allMembers = await fetchAppstleMembers();
+      const now = new Date();
+
+      const candidates = allMembers
+        .filter(m => m.status === 'Cancelled' || m.status === 'Paused')
+        .map(m => {
+          const daysSince = m.cancelledOn
+            ? Math.floor((now.getTime() - m.cancelledOn.getTime()) / (1000 * 60 * 60 * 24))
+            : m.pausedOn
+            ? Math.floor((now.getTime() - m.pausedOn.getTime()) / (1000 * 60 * 60 * 24))
+            : 999;
+
+          // Score: recency (0-40) + tier value (0-30) + tenure (0-30)
+          const recencyScore = daysSince <= 30 ? 40 : daysSince <= 60 ? 30 : daysSince <= 90 ? 20 : daysSince <= 180 ? 10 : 0;
+          const tierScore = m.tier === 'APEX' ? 30 : m.tier === 'Atabey' ? 20 : 10;
+          const tenureScore = m.joinedAt
+            ? Math.min(30, Math.floor((now.getTime() - m.joinedAt.getTime()) / (1000 * 60 * 60 * 24 * 30)) * 3)
+            : 0;
+          const totalScore = recencyScore + tierScore + tenureScore;
+
+          return {
+            name: m.name,
+            email: m.email,
+            phone: m.phone,
+            tier: m.tier,
+            monthlyRate: m.monthlyRate,
+            status: m.status,
+            daysSince,
+            totalScore,
+            priority: totalScore >= 60 ? 'HIGH' : totalScore >= 40 ? 'MEDIUM' : 'LOW',
+            cancellationFeedback: m.cancellationFeedback,
+          };
+        })
+        .filter(m => m.totalScore >= 40) // Only HIGH and MEDIUM
+        .sort((a, b) => b.totalScore - a.totalScore);
+
+      return candidates;
+    }),
+  }),
+
+  apexReview: router({
+    // Get Atabey members ranked by Power Score for APEX quarterly review
+    candidates: protectedProcedure.query(async () => {
+      const allDbMembers = await getAllMembers();
+      const atabeyMembers = allDbMembers
+        .filter((m: any) => m.tier === 'Atabey' && m.status === 'Active')
+        .map((m: any) => ({
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          phone: m.phone,
+          monthlyRate: m.monthlyRate,
+          joinedAt: m.joinedAt,
+          totalScore: m.totalScore || 0,
+          visitScore: m.visitScore || 0,
+          spendScore: m.spendScore || 0,
+          referralScore: m.referralScore || 0,
+          tenureScore: m.tenureScore || 0,
+          eventScore: m.eventScore || 0,
+          apexEligible: m.apexEligible || false,
+        }))
+        .sort((a: any, b: any) => b.totalScore - a.totalScore);
+
+      return {
+        candidates: atabeyMembers,
+        topCandidates: atabeyMembers.slice(0, 5),
+        quarterLabel: 'Q2 2026',
+        reviewDue: new Date('2026-06-15').toISOString(),
+      };
+    }),
+    // Mark a member as APEX eligible
+    setApexEligible: protectedProcedure
+      .input(z.object({ memberId: z.number(), eligible: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await upsertMember({ id: input.memberId, name: '', apexEligible: input.eligible } as any);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Staff & Commission ────────────────────────────────────────────────────
+  staff: router({
+    list: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const { staff } = await import('../drizzle/schema');
+      return db.select().from(staff).orderBy(staff.name);
+    }),
+    getLeaderboard: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const { staff } = await import('../drizzle/schema');
+      const allStaff = await db.select().from(staff).where(eq(staff.isActive, true));
+      // Sort by closedQtr desc, then closedAllTime
+      return allStaff.sort((a, b) => (b.closedQtr ?? 0) - (a.closedQtr ?? 0) || (b.closedAllTime ?? 0) - (a.closedAllTime ?? 0));
+    }),
+    upsert: protectedProcedure
+      .input(z.object({
+        id: z.number().optional(),
+        name: z.string(),
+        referralCode: z.string().optional(),
+        shopifyUrl: z.string().optional(),
+        email: z.string().optional(),
+        phone: z.string().optional(),
+        role: z.string().optional(),
+        isActive: z.boolean().optional(),
+        toursGivenAllTime: z.number().optional(),
+        toursGivenQtr: z.number().optional(),
+        closedAllTime: z.number().optional(),
+        closedQtr: z.number().optional(),
+        closedYTD: z.number().optional(),
+        bonusEligibleQtr: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { staff } = await import('../drizzle/schema');
+        if (input.id) {
+          await db.update(staff).set({ ...input, updatedAt: new Date() } as any).where(eq(staff.id, input.id));
+          return { success: true };
+        }
+        await db.insert(staff).values(input as any);
+        return { success: true };
+      }),
+    logTour: protectedProcedure
+      .input(z.object({
+        staffId: z.number().optional(),
+        staffName: z.string(),
+        prospectFirstName: z.string(),
+        prospectLastName: z.string().optional(),
+        prospectEmail: z.string().optional(),
+        prospectPhone: z.string().optional(),
+        cameWithGroup: z.boolean().optional(),
+        interestedTier: z.enum(["Visionary", "Atabey", "APEX"]).optional(),
+        converted: z.boolean().optional(),
+        memberId: z.number().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { tourLogs, staff } = await import('../drizzle/schema');
+        await db.insert(tourLogs).values({ ...input, tourDate: new Date() } as any);
+        // Increment tour count for the staff member
+        if (input.staffId) {
+          await db.execute(
+            sql`UPDATE staff SET toursGivenAllTime = toursGivenAllTime + 1, toursGivenQtr = toursGivenQtr + 1 WHERE id = ${input.staffId}`
+          );
+          if (input.converted) {
+            await db.execute(
+              sql`UPDATE staff SET closedAllTime = closedAllTime + 1, closedQtr = closedQtr + 1, closedYTD = closedYTD + 1 WHERE id = ${input.staffId}`
+            );
+          }
+        }
+        return { success: true };
+      }),
+    getTourLogs: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const { tourLogs } = await import('../drizzle/schema');
+      return db.select().from(tourLogs).orderBy(desc(tourLogs.tourDate)).limit(200);
+    }),
+    resetQuarter: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('DB unavailable');
+      await db.execute(sql`UPDATE staff SET toursGivenQtr = 0, closedQtr = 0, bonusEligibleQtr = 0`);
+      return { success: true };
+    }),
+  }),
+
+  // ─── Lockers ─────────────────────────────────────────────────────────────────
+  lockers: router({
+    list: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const { lockers } = await import('../drizzle/schema');
+      return db.select().from(lockers).orderBy(lockers.section, lockers.lockerNumber);
+    }),
+    assign: protectedProcedure
+      .input(z.object({
+        lockerNumber: z.string(),
+        memberId: z.number().nullable(),
+        memberName: z.string().nullable(),
+        tier: z.enum(["Visionary", "Atabey", "APEX"]).nullable(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { lockers } = await import('../drizzle/schema');
+        const isAvailable = input.memberId === null;
+        await db.update(lockers)
+          .set({
+            memberId: input.memberId,
+            memberName: input.memberName,
+            tier: input.tier as any,
+            isAvailable,
+            assignedAt: isAvailable ? null : new Date(),
+            notes: input.notes,
+            updatedAt: new Date(),
+          })
+          .where(eq(lockers.lockerNumber, input.lockerNumber));
+        return { success: true };
+      }),
+    seed: protectedProcedure
+      .input(z.object({
+        lockers: z.array(z.object({
+          lockerNumber: z.string(),
+          section: z.string().optional(),
+          row: z.number().optional(),
+          col: z.number().optional(),
+        }))
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { lockers } = await import('../drizzle/schema');
+        for (const l of input.lockers) {
+          const existing = await db.select().from(lockers).where(eq(lockers.lockerNumber, l.lockerNumber));
+          if (existing.length === 0) {
+            await db.insert(lockers).values({ ...l, isAvailable: true } as any);
+          }
+        }
+        return { success: true, count: input.lockers.length };
+      }),
+  }),
+
+  // ─── Member 360 Profile ───────────────────────────────────────────────────────
+  member360: router({
+    get: publicProcedure
+      .input(z.object({ memberId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const { members, tourLogs, lockers } = await import('../drizzle/schema');
+        const [member] = await db.select().from(members).where(eq(members.id, input.memberId));
+        if (!member) return null;
+        // Get their locker
+        const locker = member.lockerNumber
+          ? (await db.select().from(lockers).where(eq(lockers.lockerNumber, member.lockerNumber)))[0]
+          : null;
+        // Get tours they were involved in (as converted prospect)
+        const tours = await db.select().from(tourLogs).where(eq(tourLogs.memberId, input.memberId));
+        return { member, locker, tours };
+      }),
   }),
 
   dashboard: router({
