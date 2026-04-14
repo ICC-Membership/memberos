@@ -2,7 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import { Users, Plus, Edit2, Phone, Mail, ChevronRight, Zap, UserPlus, RefreshCw } from "lucide-react";
+import { Users, Plus, Edit2, Phone, Mail, ChevronRight, Zap, UserCheck, AlertTriangle, Filter, Star, Calendar, DollarSign, X } from "lucide-react";
 
 const STATUSES = ["New", "Contacted", "Tour Scheduled", "Proposal Sent", "Closed Won", "Closed Lost"] as const;
 const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
@@ -14,7 +14,24 @@ const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
   "Closed Lost": { color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
 };
 const TIERS = ["Visionary", "Atabey", "APEX"] as const;
-const SOURCES = ["Walk-in", "Referral", "Event", "Typeform", "Social Media", "Other"];
+const PRIORITY_COLORS: Record<string, { color: string; bg: string }> = {
+  "High":   { color: "#C8102E", bg: "rgba(200,16,46,0.15)" },
+  "Medium": { color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+  "Low":    { color: "#6B6560", bg: "rgba(107,101,96,0.12)" },
+};
+const SOURCES = ["Walk-in", "Referral", "Event", "Typeform", "Lightspeed", "Social Media", "Other"];
+
+function ScoreBar({ score }: { score: number }) {
+  const color = score >= 70 ? "#22c55e" : score >= 40 ? "#f59e0b" : "#6B6560";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <div style={{ flex: 1, height: 6, background: "rgba(245,240,235,0.08)", borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ width: `${score}%`, height: "100%", background: color, borderRadius: 3, transition: "width 0.3s" }} />
+      </div>
+      <span style={{ fontSize: "0.72rem", color, fontWeight: 700, minWidth: 28 }}>{score}</span>
+    </div>
+  );
+}
 
 const defaultForm = {
   id: undefined as number | undefined,
@@ -33,16 +50,46 @@ export default function Prospects() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...defaultForm });
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [selectedProspect, setSelectedProspect] = useState<any>(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<any>(null);
+  const [minVisits, setMinVisits] = useState(3);
 
-  const [showLightspeed, setShowLightspeed] = useState(false);
   const { data: prospects = [], refetch } = trpc.prospects.list.useQuery();
+  const { data: staffList = [] } = trpc.staff.list.useQuery();
   const { data: lsStatus } = trpc.lightspeed.status.useQuery();
-  const { data: lsProspects, isLoading: lsLoading, refetch: refetchLs } = trpc.lightspeed.prospects.useQuery(
-    { minVisits: 3 },
-    { enabled: showLightspeed && !!lsStatus?.connected }
-  );
-  const bookTour = trpc.prospects.bookTour.useMutation({ onSuccess: () => { refetch(); toast.success('Tour booked — email draft queued'); } });
-  const convertToMember = trpc.prospects.convertToMember.useMutation({ onSuccess: () => { refetch(); toast.success('Conversion email queued to Email Hub'); } });
+
+  const importFromLightspeed = trpc.prospects.importFromLightspeed.useMutation({
+    onSuccess: (r) => {
+      refetch();
+      if ("error" in r && r.error) toast.error(`Import failed: ${r.error}`);
+      else toast.success(`Imported ${r.imported} new prospects (${r.skipped} skipped)`);
+    },
+    onError: () => toast.error("Import failed"),
+  });
+
+  const assignStaff = trpc.prospects.assignStaff.useMutation({
+    onSuccess: () => { refetch(); setShowAssignModal(false); setAssignTarget(null); toast.success("Prospect assigned"); },
+    onError: () => toast.error("Failed to assign"),
+  });
+
+  const bookTour = trpc.prospects.bookTour.useMutation({
+    onSuccess: () => { refetch(); setSelectedProspect(null); toast.success("Tour booked — email draft queued"); },
+  });
+
+  const convertToMember = trpc.prospects.convertToMember.useMutation({
+    onSuccess: (r) => {
+      refetch(); setSelectedProspect(null); toast.success("Conversion email queued");
+      if ("subscriptionUrl" in r) window.open(r.subscriptionUrl as string, "_blank");
+    },
+  });
+
+  const advanceStatus = trpc.prospects.advanceStatus.useMutation({
+    onSuccess: () => { refetch(); setSelectedProspect(null); toast.success("Status updated"); },
+  });
+
   const upsertProspect = trpc.prospects.upsert.useMutation({
     onSuccess: () => { refetch(); setShowForm(false); setForm({ ...defaultForm }); toast.success("Prospect saved"); },
     onError: () => toast.error("Failed to save prospect"),
@@ -58,13 +105,27 @@ export default function Prospects() {
     upsertProspect.mutate(form as any);
   };
 
-  const filtered = filterStatus === "all" ? prospects : prospects.filter((p: any) => p.status === filterStatus);
+  let filtered = [...prospects];
+  if (filterStatus !== "all") filtered = filtered.filter((p: any) => p.status === filterStatus);
+  if (filterSource !== "all") filtered = filtered.filter((p: any) => p.source === filterSource);
+  if (filterPriority !== "all") filtered = filtered.filter((p: any) => p.priority === filterPriority);
+  filtered.sort((a: any, b: any) => {
+    const pOrder: Record<string, number> = { High: 0, Medium: 1, Low: 2 };
+    const pDiff = (pOrder[a.priority || "Medium"] ?? 1) - (pOrder[b.priority || "Medium"] ?? 1);
+    if (pDiff !== 0) return pDiff;
+    return (b.prospectScore || 0) - (a.prospectScore || 0);
+  });
 
-  // Pipeline counts
   const pipeline = STATUSES.reduce((acc, s) => {
     acc[s] = prospects.filter((p: any) => p.status === s).length;
     return acc;
   }, {} as Record<string, number>);
+
+  const highPriority = prospects.filter((p: any) => p.priority === "High" && !["Closed Won", "Closed Lost"].includes(p.status));
+  const unassigned = prospects.filter((p: any) => !p.assignedStaffId && !["Closed Won", "Closed Lost"].includes(p.status));
+  const S = { color: "#F5F0EB" };
+  const DIM = { color: "#6B6560" };
+  const CARD = { background: "rgba(245,240,235,0.04)", border: "1px solid rgba(245,240,235,0.08)", borderRadius: "0.5rem", padding: "1rem" };
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }}>
@@ -158,89 +219,129 @@ export default function Prospects() {
         </div>
       )}
 
-      {/* Lightspeed Prospect Finder */}
-      <div style={{ marginTop: "2rem", borderTop: "1px solid rgba(245,240,235,0.08)", paddingTop: "1.5rem" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Zap size={16} color="#C4A35A" />
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1rem", letterSpacing: "0.08em", color: "#E8E4DC" }}>LIGHTSPEED PROSPECT FINDER</span>
-            {lsStatus?.connected && <span style={{ fontSize: "0.65rem", padding: "0.15rem 0.4rem", borderRadius: "0.2rem", background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>CONNECTED</span>}
-          </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            {lsStatus?.connected && showLightspeed && (
-              <button onClick={() => refetchLs()} style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.35rem 0.75rem", borderRadius: "0.25rem", background: "transparent", color: "#6B6560", border: "1px solid rgba(245,240,235,0.12)", cursor: "pointer", fontSize: "0.75rem" }}>
-                <RefreshCw size={12} /> Refresh
-              </button>
+      {selectedProspect && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: "1rem" }} onClick={() => setSelectedProspect(null)}>
+          <div style={{ background: "#1A1614", border: "1px solid rgba(245,240,235,0.12)", borderRadius: "0.75rem", padding: "1.5rem", width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
+              <div>
+                <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.5rem", color: "#F5F0EB", margin: 0, letterSpacing: "0.04em" }}>{selectedProspect.name}</h2>
+                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.4rem", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "0.2rem", background: PRIORITY_COLORS[selectedProspect.priority || "Medium"].bg, color: PRIORITY_COLORS[selectedProspect.priority || "Medium"].color, fontWeight: 700 }}>{selectedProspect.priority || "Medium"} Priority</span>
+                  <span style={{ fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "0.2rem", background: STATUS_COLORS[selectedProspect.status].bg, color: STATUS_COLORS[selectedProspect.status].color, fontWeight: 600 }}>{selectedProspect.status}</span>
+                  {selectedProspect.source && <span style={{ fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "0.2rem", background: "rgba(245,240,235,0.06)", color: "#6B6560" }}>{selectedProspect.source}</span>}
+                </div>
+              </div>
+              <button onClick={() => setSelectedProspect(null)} style={{ background: "transparent", border: "none", color: "#6B6560", cursor: "pointer", padding: "0.25rem" }}><X size={18} /></button>
+            </div>
+            <div style={{ marginBottom: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                <span style={{ fontSize: "0.72rem", color: "#6B6560", letterSpacing: "0.08em" }}>PROSPECT SCORE</span>
+                <span style={{ fontSize: "0.72rem", color: "#6B6560" }}>{(selectedProspect.prospectScore || 0) >= 70 ? "🔥 Hot" : (selectedProspect.prospectScore || 0) >= 40 ? "⚡ Warm" : "❄️ Cold"}</span>
+              </div>
+              <ScoreBar score={selectedProspect.prospectScore || 0} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1rem" }}>
+              {selectedProspect.email && (
+                <a href={`mailto:${selectedProspect.email}`} style={{ background: "rgba(245,240,235,0.04)", border: "1px solid rgba(245,240,235,0.08)", borderRadius: "0.5rem", padding: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none" }}>
+                  <Mail size={14} color="#C8102E" />
+                  <span style={{ fontSize: "0.78rem", color: "#F5F0EB", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedProspect.email}</span>
+                </a>
+              )}
+              {selectedProspect.phone && (
+                <a href={`tel:${selectedProspect.phone}`} style={{ background: "rgba(245,240,235,0.04)", border: "1px solid rgba(245,240,235,0.08)", borderRadius: "0.5rem", padding: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem", textDecoration: "none" }}>
+                  <Phone size={14} color="#C8102E" />
+                  <span style={{ fontSize: "0.78rem", color: "#F5F0EB" }}>{selectedProspect.phone}</span>
+                </a>
+              )}
+            </div>
+            {(selectedProspect.visitCount > 0 || selectedProspect.totalSpend > 0) && (
+              <div style={{ background: "rgba(245,240,235,0.04)", border: "1px solid rgba(245,240,235,0.08)", borderRadius: "0.5rem", padding: "1rem", marginBottom: "1rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div>
+                  <div style={{ fontSize: "0.68rem", color: "#6B6560", letterSpacing: "0.08em", marginBottom: "0.25rem" }}>VISITS (90 DAYS)</div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#F5F0EB" }}>{selectedProspect.visitCount}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.68rem", color: "#6B6560", letterSpacing: "0.08em", marginBottom: "0.25rem" }}>TOTAL SPEND</div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#22c55e" }}>${((selectedProspect.totalSpend || 0) / 100).toFixed(0)}</div>
+                </div>
+              </div>
             )}
-            <button
-              onClick={() => setShowLightspeed(v => !v)}
-              style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.35rem 0.75rem", borderRadius: "0.25rem", background: showLightspeed ? "rgba(196,163,90,0.15)" : "transparent", color: "#C4A35A", border: "1px solid rgba(196,163,90,0.3)", cursor: "pointer", fontSize: "0.75rem" }}
-            >
-              {showLightspeed ? "Hide" : "Find Prospects from POS"}
-            </button>
+            {selectedProspect.assignedStaffName && (
+              <div style={{ background: "rgba(245,240,235,0.04)", border: "1px solid rgba(245,240,235,0.08)", borderRadius: "0.5rem", padding: "0.75rem", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <UserCheck size={14} color="#3b82f6" />
+                <span style={{ fontSize: "0.82rem", color: "#F5F0EB" }}>Assigned to <strong>{selectedProspect.assignedStaffName}</strong></span>
+              </div>
+            )}
+            {selectedProspect.notes && (
+              <div style={{ background: "rgba(245,240,235,0.04)", border: "1px solid rgba(245,240,235,0.08)", borderRadius: "0.5rem", padding: "0.75rem", marginBottom: "1rem" }}>
+                <div style={{ fontSize: "0.68rem", color: "#6B6560", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>NOTES</div>
+                <p style={{ fontSize: "0.82rem", color: "#F5F0EB", margin: 0, lineHeight: 1.5 }}>{selectedProspect.notes}</p>
+              </div>
+            )}
+            {isAuthenticated && (
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                {selectedProspect.status !== "Tour Scheduled" && selectedProspect.status !== "Closed Won" && (
+                  <button onClick={() => bookTour.mutate({ id: selectedProspect.id, name: selectedProspect.name, email: selectedProspect.email, phone: selectedProspect.phone, tier: selectedProspect.interestedTier })} disabled={bookTour.isPending} style={{ flex: 1, padding: "0.6rem", background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.25)", borderRadius: "0.25rem", cursor: "pointer", fontSize: "0.82rem", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
+                    <Calendar size={14} /> Book Tour
+                  </button>
+                )}
+                {selectedProspect.status !== "Closed Won" && (
+                  <button onClick={() => convertToMember.mutate({ id: selectedProspect.id, name: selectedProspect.name, email: selectedProspect.email, tier: selectedProspect.interestedTier })} disabled={convertToMember.isPending} style={{ flex: 1, padding: "0.6rem", background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", borderRadius: "0.25rem", cursor: "pointer", fontSize: "0.82rem", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
+                    <Star size={14} /> Convert to Member
+                  </button>
+                )}
+                <button onClick={() => { setAssignTarget(selectedProspect); setShowAssignModal(true); setSelectedProspect(null); }} style={{ padding: "0.6rem 1rem", background: "rgba(59,130,246,0.1)", color: "#3b82f6", border: "1px solid rgba(59,130,246,0.2)", borderRadius: "0.25rem", cursor: "pointer", fontSize: "0.82rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <UserCheck size={14} /> Assign Staff
+                </button>
+                <button onClick={() => { openEdit(selectedProspect); setSelectedProspect(null); }} style={{ padding: "0.6rem 1rem", background: "rgba(245,240,235,0.06)", color: "#6B6560", border: "1px solid rgba(245,240,235,0.1)", borderRadius: "0.25rem", cursor: "pointer", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <Edit2 size={14} /> Edit
+                </button>
+              </div>
+            )}
+            {isAuthenticated && !["Closed Won", "Closed Lost"].includes(selectedProspect.status) && (
+              <div style={{ marginTop: "1rem", borderTop: "1px solid rgba(245,240,235,0.08)", paddingTop: "1rem" }}>
+                <div style={{ fontSize: "0.68rem", color: "#6B6560", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>ADVANCE STATUS</div>
+                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                  {STATUSES.filter(s => s !== selectedProspect.status).map(s => (
+                    <button key={s} onClick={() => advanceStatus.mutate({ id: selectedProspect.id, status: s })} style={{ padding: "0.3rem 0.6rem", background: STATUS_COLORS[s].bg, color: STATUS_COLORS[s].color, border: `1px solid ${STATUS_COLORS[s].color}30`, borderRadius: "0.25rem", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600 }}>
+                      → {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-        {showLightspeed && (
-          !lsStatus?.connected ? (
-            <div style={{ padding: "2rem", textAlign: "center", background: "rgba(245,240,235,0.03)", borderRadius: "0.5rem", border: "1px dashed rgba(196,163,90,0.25)" }}>
-              <Zap size={24} style={{ color: "#C4A35A", marginBottom: "0.75rem", opacity: 0.5 }} />
-              <p style={{ color: "#6B6560", fontSize: "0.85rem", marginBottom: "0.75rem" }}>Connect Lightspeed to automatically identify frequent POS visitors who aren't members yet.</p>
-              <a href="/api/lightspeed/connect" style={{ padding: "0.5rem 1.25rem", borderRadius: "0.25rem", background: "#C4A35A", color: "#0A0A0A", fontSize: "0.82rem", fontWeight: 600, textDecoration: "none" }}>Connect Lightspeed →</a>
-            </div>
-          ) : lsLoading ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem", gap: "0.75rem", color: "#6B6560" }}>
-              <RefreshCw size={16} className="animate-spin" />
-              <span style={{ fontSize: "0.82rem" }}>Scanning POS data for frequent visitors not yet members...</span>
-            </div>
-          ) : (lsProspects?.prospects || []).length === 0 ? (
-            <div style={{ textAlign: "center", padding: "2rem", color: "#6B6560", fontSize: "0.82rem" }}>No frequent visitors found who aren't already members. Try lowering the minimum visits threshold.</div>
-          ) : (
-            <div style={{ background: "#1A1614", border: "1px solid rgba(196,163,90,0.2)", borderRadius: "0.5rem", overflow: "hidden" }}>
-              <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid rgba(245,240,235,0.06)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ color: "#C4A35A", fontSize: "0.78rem", fontWeight: 600 }}>{(lsProspects?.prospects || []).length} frequent visitors found — not yet members</span>
-                <span style={{ color: "#6B6560", fontSize: "0.72rem" }}>(3+ visits in last 90 days)</span>
-              </div>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(245,240,235,0.06)" }}>
-                    {["Name", "Email", "Visits (90d)", "Spend (90d)", "Last Visit", ""].map(h => (
-                      <th key={h} style={{ padding: "0.6rem 1rem", textAlign: "left", color: "#6B6560", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.06em" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(lsProspects?.prospects || []).map((p: any, i: number) => (
-                    <tr key={i} style={{ borderBottom: "1px solid rgba(245,240,235,0.04)" }}>
-                      <td style={{ padding: "0.75rem 1rem", color: "#E8E4DC", fontSize: "0.85rem", fontWeight: 600 }}>{p.name}</td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#6B6560", fontSize: "0.78rem" }}>{p.email || "—"}</td>
-                      <td style={{ padding: "0.75rem 1rem" }}><span style={{ color: "#C4A35A", fontWeight: 700, fontSize: "0.9rem" }}>{p.visits}</span></td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#22c55e", fontSize: "0.82rem" }}>${p.spend.toFixed(0)}</td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#6B6560", fontSize: "0.75rem" }}>{new Date(p.lastVisit).toLocaleDateString()}</td>
-                      <td style={{ padding: "0.75rem 1rem" }}>
-                        <button
-                          onClick={() => {
-                            setForm({ ...defaultForm, name: p.name, email: p.email || "", phone: p.phone || "", source: "Walk-in", notes: `${p.visits} visits in last 90 days · $${p.spend.toFixed(0)} spend` });
-                            setShowForm(true);
-                          }}
-                          style={{ display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.3rem 0.6rem", borderRadius: "0.2rem", background: "rgba(200,16,46,0.12)", color: "#C8102E", border: "1px solid rgba(200,16,46,0.25)", cursor: "pointer", fontSize: "0.72rem", fontWeight: 600 }}
-                        >
-                          <UserPlus size={11} /> Add to Pipeline
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        )}
-      </div>
+      )}
 
-      {/* Add/Edit Modal */}
+      {showAssignModal && assignTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "1rem" }} onClick={() => { setShowAssignModal(false); setAssignTarget(null); }}>
+          <div style={{ background: "#1A1614", border: "1px solid rgba(245,240,235,0.12)", borderRadius: "0.75rem", padding: "1.5rem", width: "100%", maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.25rem", color: "#F5F0EB", margin: "0 0 0.25rem", letterSpacing: "0.04em" }}>ASSIGN STAFF</h3>
+            <p style={{ color: "#6B6560", fontSize: "0.82rem", margin: "0 0 1.25rem" }}>Assign <strong style={{ color: "#F5F0EB" }}>{assignTarget.name}</strong> to a staff member for follow-up</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {(staffList as any[]).filter((s: any) => s.isActive).map((s: any) => (
+                <button key={s.id} onClick={() => assignStaff.mutate({ id: assignTarget.id, staffId: s.id, staffName: s.name })} disabled={assignStaff.isPending} style={{ padding: "0.75rem 1rem", background: "rgba(245,240,235,0.04)", border: "1px solid rgba(245,240,235,0.1)", borderRadius: "0.4rem", color: "#F5F0EB", cursor: "pointer", textAlign: "left", fontSize: "0.85rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>{s.name}</span>
+                  <span style={{ fontSize: "0.72rem", color: "#6B6560" }}>{s.role || "Staff"}</span>
+                </button>
+              ))}
+              {(staffList as any[]).filter((s: any) => s.isActive).length === 0 && (
+                <p style={{ color: "#6B6560", fontSize: "0.82rem", textAlign: "center" }}>No active staff found. Add staff in the Commission page.</p>
+              )}
+            </div>
+            <button onClick={() => { setShowAssignModal(false); setAssignTarget(null); }} style={{ marginTop: "1rem", width: "100%", padding: "0.5rem", background: "transparent", border: "1px solid rgba(245,240,235,0.12)", borderRadius: "0.25rem", color: "#6B6560", cursor: "pointer" }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
       {showForm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "1rem" }}>
-          <div style={{ background: "#1A1614", border: "1px solid rgba(200,16,46,0.25)", borderRadius: "0.75rem", padding: "2rem", width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto" }}>
-            <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.5rem", color: "#F5F0EB", marginBottom: "1.5rem" }}>{form.id ? "EDIT PROSPECT" : "ADD PROSPECT"}</h2>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "1rem" }} onClick={() => setShowForm(false)}>
+          <div style={{ background: "#1A1614", border: "1px solid rgba(200,16,46,0.25)", borderRadius: "0.75rem", padding: "2rem", width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+              <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.5rem", color: "#F5F0EB", margin: 0 }}>{form.id ? "EDIT PROSPECT" : "ADD PROSPECT"}</h2>
+              <button onClick={() => setShowForm(false)} style={{ background: "transparent", border: "none", color: "#6B6560", cursor: "pointer" }}><X size={18} /></button>
+            </div>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div>
                 <label style={{ color: "#6B6560", fontSize: "0.75rem", display: "block", marginBottom: "0.3rem" }}>FULL NAME *</label>

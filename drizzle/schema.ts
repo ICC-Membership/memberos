@@ -106,13 +106,20 @@ export const prospects = mysqlTable("prospects", {
   source: varchar("source", { length: 128 }), // typeform, referral, walk-in, event
   interestedTier: mysqlEnum("interestedTier", ["Visionary", "Atabey", "APEX"]),
   status: mysqlEnum("status", ["New", "Contacted", "Tour Scheduled", "Proposal Sent", "Closed Won", "Closed Lost"]).default("New").notNull(),
-  referredBy: varchar("referredBy", { length: 255 }),
+   referredBy: varchar("referredBy", { length: 255 }),
   notes: text("notes"),
   lastContactedAt: timestamp("lastContactedAt"),
+  // Auto-population fields from Lightspeed + scoring
+  lightspeedCustomerId: varchar("lightspeedCustomerId", { length: 64 }),
+  visitCount: int("visitCount").default(0),
+  totalSpend: int("totalSpend").default(0), // in cents
+  prospectScore: int("prospectScore").default(0), // 0-100
+  assignedStaffId: int("assignedStaffId"), // FK to staff.id
+  assignedStaffName: varchar("assignedStaffName", { length: 255 }),
+  priority: mysqlEnum("priority", ["High", "Medium", "Low"]).default("Medium"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
-
 export type Prospect = typeof prospects.$inferSelect;
 export type InsertProspect = typeof prospects.$inferInsert;
 

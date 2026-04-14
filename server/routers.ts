@@ -345,6 +345,102 @@ Write a warm, professional reply. Keep it concise and helpful.`,
         await db.update(prospects).set({ status: 'Closed Won', lastContactedAt: new Date() }).where(eq(prospects.id, input.id));
         return { success: true, subscriptionUrl, queued: !!input.email };
       }),
+    // Import frequent non-member visitors from Lightspeed as prospects
+    importFromLightspeed: protectedProcedure
+      .input(z.object({ minVisits: z.number().default(3), minSpendCents: z.number().default(5000) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { prospects } = await import('../drizzle/schema');
+        const token = await getLightspeedToken();
+        if (!token) return { imported: 0, skipped: 0, error: 'Lightspeed not connected' };
+        try {
+          const lsCustomers = await getLightspeedCustomers();
+          const currentMembers = await getAllMembers();
+          const memberEmails = new Set(currentMembers.map((m: any) => (m.email || '').toLowerCase()));
+          const existingProspects = await getAllProspects();
+          const existingEmails = new Set(existingProspects.map((p: any) => (p.email || '').toLowerCase()).filter(Boolean));
+          const existingLsIds = new Set(existingProspects.map((p: any) => p.lightspeedCustomerId).filter(Boolean));
+          const since90 = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+          const recentSales = await getLightspeedSales(since90);
+          const customerStats: Record<string, { name: string; email: string; phone: string; visits: number; spend: number; lastVisit: Date; lsId: string }> = {};
+          for (const sale of recentSales) {
+            const cid = sale.customerID;
+            if (!cid || cid === '0') continue;
+            if (!customerStats[cid]) {
+              const customer = lsCustomers.find((c: any) => c.customerID === cid);
+              if (!customer) continue;
+              const email = customer.Contact?.Emails?.ContactEmail?.[0]?.address || customer.Contact?.Emails?.ContactEmail?.address || '';
+              const firstName = customer.firstName || '';
+              const lastName = customer.lastName || '';
+              customerStats[cid] = { name: `${firstName} ${lastName}`.trim() || 'Unknown', email, phone: customer.Contact?.Phones?.ContactPhone?.[0]?.number || '', visits: 0, spend: 0, lastVisit: new Date(0), lsId: cid };
+            }
+            customerStats[cid].visits++;
+            customerStats[cid].spend += Math.round(parseFloat(sale.calcTotal || '0') * 100);
+            const saleDate = new Date(sale.timeStamp);
+            if (saleDate > customerStats[cid].lastVisit) customerStats[cid].lastVisit = saleDate;
+          }
+          let imported = 0; let skipped = 0;
+          for (const c of Object.values(customerStats)) {
+            if (c.visits < input.minVisits && c.spend < input.minSpendCents) { skipped++; continue; }
+            if (c.email && memberEmails.has(c.email.toLowerCase())) { skipped++; continue; }
+            if (c.email && existingEmails.has(c.email.toLowerCase())) { skipped++; continue; }
+            if (existingLsIds.has(c.lsId)) { skipped++; continue; }
+            const visitPts = Math.min(40, Math.round((c.visits / 10) * 40));
+            const spendPts = Math.min(40, Math.round((c.spend / 100000) * 40));
+            const daysSince = Math.round((Date.now() - c.lastVisit.getTime()) / (1000 * 60 * 60 * 24));
+            const recencyPts = Math.max(0, 20 - Math.round(daysSince / 4));
+            const score = visitPts + spendPts + recencyPts;
+            const priority = score >= 60 ? 'High' : score >= 35 ? 'Medium' : 'Low';
+            await db.insert(prospects).values({ name: c.name, email: c.email || undefined, phone: c.phone || undefined, source: 'Lightspeed', status: 'New', lightspeedCustomerId: c.lsId, visitCount: c.visits, totalSpend: c.spend, prospectScore: score, priority } as any);
+            imported++;
+          }
+          return { imported, skipped };
+        } catch (e) { console.error('importFromLightspeed error:', e); return { imported: 0, skipped: 0, error: String(e) }; }
+      }),
+    assignStaff: protectedProcedure
+      .input(z.object({ id: z.number(), staffId: z.number(), staffName: z.string() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { prospects } = await import('../drizzle/schema');
+        await db.update(prospects).set({ assignedStaffId: input.staffId, assignedStaffName: input.staffName }).where(eq(prospects.id, input.id));
+        return { success: true };
+      }),
+    // Webhook: Typeform inquiry auto-creates prospect
+    typeformWebhook: publicProcedure
+      .input(z.object({ name: z.string(), email: z.string().optional(), phone: z.string().optional(), tier: z.string().optional(), referredBy: z.string().optional(), notes: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { prospects } = await import('../drizzle/schema');
+        if (input.email) {
+          const existing = await getAllProspects();
+          const dup = existing.find((p: any) => p.email?.toLowerCase() === input.email!.toLowerCase());
+          if (dup) return { created: false, id: dup.id, reason: 'duplicate' };
+        }
+        const [result] = await db.insert(prospects).values({ name: input.name, email: input.email, phone: input.phone, source: 'Typeform', status: 'New', interestedTier: (input.tier as any) || 'Visionary', referredBy: input.referredBy, notes: input.notes, prospectScore: 50, priority: 'High' } as any).$returningId();
+        return { created: true, id: result?.id };
+      }),
+    // Pre-built n8n/Zapier webhook receiver for Ninety.io Rocks sync
+    ninetyRocksWebhook: publicProcedure
+      .input(z.object({ title: z.string(), owner: z.string().optional(), quarter: z.string().optional(), status: z.enum(['On Track', 'Off Track', 'Done', 'Not Started']).optional(), progressPct: z.number().optional(), ninetyUrl: z.string().optional(), secret: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const expectedSecret = process.env.NINETY_WEBHOOK_SECRET;
+        if (expectedSecret && input.secret !== expectedSecret) throw new Error('Unauthorized');
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { rocks } = await import('../drizzle/schema');
+        const quarter = input.quarter || (() => { const now = new Date(); const q = Math.ceil((now.getMonth() + 1) / 3); return `Q${q} ${now.getFullYear()}`; })();
+        const existing = await db.select().from(rocks).where(eq(rocks.title, input.title)).limit(1);
+        if (existing.length > 0) {
+          await db.update(rocks).set({ status: input.status || existing[0].status, progressPct: input.progressPct ?? existing[0].progressPct, owner: input.owner || existing[0].owner, ninetyUrl: input.ninetyUrl || existing[0].ninetyUrl }).where(eq(rocks.id, existing[0].id));
+          return { action: 'updated', id: existing[0].id };
+        } else {
+          const [result] = await db.insert(rocks).values({ title: input.title, owner: input.owner, quarter, status: input.status || 'Not Started', progressPct: input.progressPct || 0, ninetyUrl: input.ninetyUrl } as any).$returningId();
+          return { action: 'created', id: result?.id };
+        }
+      }),
   }),
 
   shopify: router({

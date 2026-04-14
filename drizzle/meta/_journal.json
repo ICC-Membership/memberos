@@ -50,6 +50,13 @@
       "when": 1776179764761,
       "tag": "0006_graceful_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1776181068685,
+      "tag": "0007_foamy_lady_mastermind",
+      "breakpoints": true
     }
   ]
 }

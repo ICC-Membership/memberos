@@ -136,3 +136,13 @@
 - [x] Make locker diagram bigger and easier to read (larger cells, larger text)
 - [ ] Google Sheet ↔ Locker Diagram two-way auto-sync (requires Google Sheets MCP integration)
 - [ ] Lightspeed → locker popup auto-populate phone/email/birthdate/notes
+
+## User Feedback — Apr 14 (Lit-Ventures + Prospects Overhaul)
+- [x] Remove Lit-Ventures from sidebar nav (keep page at /lit-ventures for direct access)
+- [x] Rebuild Prospects page: auto-populate from Lightspeed spend/frequency + Typeform inquiries
+- [x] Prospect scoring: Lightspeed visit frequency + spend threshold = auto-score
+- [x] Staff targeting view: show top prospects with "Assign to Staff" for follow-up
+- [x] Typeform inquiry → auto-create prospect with source tag
+- [x] Lightspeed non-member frequent visitor → auto-create prospect with visit/spend data
+- [x] Prospect status pipeline: New → Contacted → Tour Scheduled → Converted / Not Interested
+- [ ] n8n webhook endpoint for Ninety.io Rocks sync (pre-built, ready when Ninety adds Zapier trigger)

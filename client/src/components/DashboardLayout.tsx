@@ -27,7 +27,6 @@ import {
   DollarSign,
   RotateCcw,
   Crown,
-  Briefcase,
   Shield,
 } from "lucide-react";
 
@@ -48,7 +47,6 @@ const NAV_ITEMS = [
   { href: "/strategy", icon: TrendingUp, label: "Strategy" },
   { href: "/commission", icon: DollarSign, label: "Commission" },
   { href: "/training", icon: BookOpen, label: "Training" },
-  { href: "/lit-ventures", icon: Briefcase, label: "Lit-Ventures" },
   { href: "/system-monitor", icon: Shield, label: "System Monitor" },
 ];
 
