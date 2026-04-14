@@ -146,3 +146,9 @@
 - [x] Lightspeed non-member frequent visitor → auto-create prospect with visit/spend data
 - [x] Prospect status pipeline: New → Contacted → Tour Scheduled → Converted / Not Interested
 - [ ] n8n webhook endpoint for Ninety.io Rocks sync (pre-built, ready when Ninety adds Zapier trigger)
+
+## User Feedback — Apr 14 (Prospect Scoring Thresholds)
+- [ ] Import threshold: 3+ visits/month AND $50+ avg spend per visit (from Lightspeed)
+- [ ] Composite prospect score: 60% visit frequency rank + 40% spend-per-visit rank
+- [ ] Ranked list view: sort by composite score descending, show visits/mo, spend/visit, contact info
+- [ ] Contact info visible on prospect card: name, phone, email, last visit date

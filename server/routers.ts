@@ -347,7 +347,11 @@ Write a warm, professional reply. Keep it concise and helpful.`,
       }),
     // Import frequent non-member visitors from Lightspeed as prospects
     importFromLightspeed: protectedProcedure
-      .input(z.object({ minVisits: z.number().default(3), minSpendCents: z.number().default(5000) }))
+      // Thresholds: 3+ visits/month (≈12 in 90 days) AND $50+ avg spend per visit
+      .input(z.object({
+        minVisitsPerMonth: z.number().default(3),   // visits per month threshold
+        minSpendPerVisitCents: z.number().default(5000), // $50 per visit in cents
+      }))
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error('DB unavailable');
@@ -361,10 +365,23 @@ Write a warm, professional reply. Keep it concise and helpful.`,
           const existingProspects = await getAllProspects();
           const existingEmails = new Set(existingProspects.map((p: any) => (p.email || '').toLowerCase()).filter(Boolean));
           const existingLsIds = new Set(existingProspects.map((p: any) => p.lightspeedCustomerId).filter(Boolean));
+          // Use 30-day window to accurately measure visits/month
+          const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
           const since90 = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-          const recentSales = await getLightspeedSales(since90);
-          const customerStats: Record<string, { name: string; email: string; phone: string; visits: number; spend: number; lastVisit: Date; lsId: string }> = {};
-          for (const sale of recentSales) {
+          const recentSales30 = await getLightspeedSales(since30);
+          const recentSales90 = await getLightspeedSales(since90);
+          // Build 30-day stats (for threshold check)
+          const stats30: Record<string, { visits: number; spend: number }> = {};
+          for (const sale of recentSales30) {
+            const cid = sale.customerID;
+            if (!cid || cid === '0') continue;
+            if (!stats30[cid]) stats30[cid] = { visits: 0, spend: 0 };
+            stats30[cid].visits++;
+            stats30[cid].spend += Math.round(parseFloat(sale.calcTotal || '0') * 100);
+          }
+          // Build 90-day stats (for scoring context)
+          const customerStats: Record<string, { name: string; email: string; phone: string; visits30: number; visits90: number; spend30: number; spend90: number; spendPerVisit: number; lastVisit: Date; lsId: string }> = {};
+          for (const sale of recentSales90) {
             const cid = sale.customerID;
             if (!cid || cid === '0') continue;
             if (!customerStats[cid]) {
@@ -373,26 +390,48 @@ Write a warm, professional reply. Keep it concise and helpful.`,
               const email = customer.Contact?.Emails?.ContactEmail?.[0]?.address || customer.Contact?.Emails?.ContactEmail?.address || '';
               const firstName = customer.firstName || '';
               const lastName = customer.lastName || '';
-              customerStats[cid] = { name: `${firstName} ${lastName}`.trim() || 'Unknown', email, phone: customer.Contact?.Phones?.ContactPhone?.[0]?.number || '', visits: 0, spend: 0, lastVisit: new Date(0), lsId: cid };
+              customerStats[cid] = { name: `${firstName} ${lastName}`.trim() || 'Unknown', email, phone: customer.Contact?.Phones?.ContactPhone?.[0]?.number || '', visits30: stats30[cid]?.visits || 0, visits90: 0, spend30: stats30[cid]?.spend || 0, spend90: 0, spendPerVisit: 0, lastVisit: new Date(0), lsId: cid };
             }
-            customerStats[cid].visits++;
-            customerStats[cid].spend += Math.round(parseFloat(sale.calcTotal || '0') * 100);
+            customerStats[cid].visits90++;
+            customerStats[cid].spend90 += Math.round(parseFloat(sale.calcTotal || '0') * 100);
             const saleDate = new Date(sale.timeStamp);
             if (saleDate > customerStats[cid].lastVisit) customerStats[cid].lastVisit = saleDate;
           }
-          let imported = 0; let skipped = 0;
+          // Compute spend per visit (using 90-day data for stability)
           for (const c of Object.values(customerStats)) {
-            if (c.visits < input.minVisits && c.spend < input.minSpendCents) { skipped++; continue; }
+            c.spendPerVisit = c.visits90 > 0 ? Math.round(c.spend90 / c.visits90) : 0;
+          }
+          let imported = 0; let skipped = 0;
+          // Filter: must meet BOTH thresholds — 3+ visits in last 30 days AND $50+ avg per visit
+          const minVisits30 = input.minVisitsPerMonth; // 3
+          const minSpendPerVisit = input.minSpendPerVisitCents; // 5000 cents = $50
+          const qualified = Object.values(customerStats).filter(c =>
+            c.visits30 >= minVisits30 && c.spendPerVisit >= minSpendPerVisit
+          );
+          // Composite score: 60% visit frequency rank + 40% spend-per-visit rank
+          const maxVisits = Math.max(...qualified.map(c => c.visits30), 1);
+          const maxSpendPV = Math.max(...qualified.map(c => c.spendPerVisit), 1);
+          for (const c of qualified) {
             if (c.email && memberEmails.has(c.email.toLowerCase())) { skipped++; continue; }
             if (c.email && existingEmails.has(c.email.toLowerCase())) { skipped++; continue; }
             if (existingLsIds.has(c.lsId)) { skipped++; continue; }
-            const visitPts = Math.min(40, Math.round((c.visits / 10) * 40));
-            const spendPts = Math.min(40, Math.round((c.spend / 100000) * 40));
-            const daysSince = Math.round((Date.now() - c.lastVisit.getTime()) / (1000 * 60 * 60 * 24));
-            const recencyPts = Math.max(0, 20 - Math.round(daysSince / 4));
-            const score = visitPts + spendPts + recencyPts;
-            const priority = score >= 60 ? 'High' : score >= 35 ? 'Medium' : 'Low';
-            await db.insert(prospects).values({ name: c.name, email: c.email || undefined, phone: c.phone || undefined, source: 'Lightspeed', status: 'New', lightspeedCustomerId: c.lsId, visitCount: c.visits, totalSpend: c.spend, prospectScore: score, priority } as any);
+            const visitScore = Math.round((c.visits30 / maxVisits) * 60);   // 0–60 pts
+            const spendScore = Math.round((c.spendPerVisit / maxSpendPV) * 40); // 0–40 pts
+            const score = visitScore + spendScore; // 0–100
+            const priority = score >= 70 ? 'High' : score >= 45 ? 'Medium' : 'Low';
+            await db.insert(prospects).values({
+              name: c.name,
+              email: c.email || undefined,
+              phone: c.phone || undefined,
+              source: 'Lightspeed',
+              status: 'New',
+              lightspeedCustomerId: c.lsId,
+              visitCount: c.visits30,
+              totalSpend: c.spend90,
+              prospectScore: score,
+              priority,
+              notes: `${c.visits30} visits/mo · $${(c.spendPerVisit / 100).toFixed(0)}/visit avg · 90-day total: $${(c.spend90 / 100).toFixed(0)}`,
+            } as any);
             imported++;
           }
           return { imported, skipped };

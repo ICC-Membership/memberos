@@ -130,20 +130,45 @@ export default function Prospects() {
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <Users size={28} color="#C8102E" />
           <div>
             <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2rem", color: "#F5F0EB", letterSpacing: "0.04em", margin: 0 }}>PROSPECT PIPELINE</h1>
-            <p style={{ color: "#6B6560", fontSize: "0.82rem", margin: 0 }}>Track every lead from inquiry to membership close</p>
+            <p style={{ color: "#6B6560", fontSize: "0.82rem", margin: 0 }}>Ranked by visits/month + spend/visit · Threshold: 3+ visits/mo &amp; $50+/visit</p>
           </div>
         </div>
-        {isAuthenticated && (
-          <button onClick={() => { setForm({ ...defaultForm }); setShowForm(true); }} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", borderRadius: "0.25rem", background: "#C8102E", color: "#fff", border: "none", cursor: "pointer", fontSize: "0.82rem" }}>
-            <Plus size={14} /> Add Prospect
-          </button>
-        )}
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          {isAuthenticated && (
+            <button
+              onClick={() => importFromLightspeed.mutate({ minVisitsPerMonth: minVisits, minSpendPerVisitCents: 5000 })}
+              disabled={importFromLightspeed.isPending}
+              style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", borderRadius: "0.25rem", background: "rgba(196,163,90,0.12)", color: "#C4A35A", border: "1px solid rgba(196,163,90,0.3)", cursor: "pointer", fontSize: "0.82rem", fontWeight: 600 }}
+            >
+              <Zap size={14} /> {importFromLightspeed.isPending ? "Scanning..." : "Import from Lightspeed"}
+            </button>
+          )}
+          {isAuthenticated && (
+            <button onClick={() => { setForm({ ...defaultForm }); setShowForm(true); }} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.5rem 1rem", borderRadius: "0.25rem", background: "#C8102E", color: "#fff", border: "none", cursor: "pointer", fontSize: "0.82rem" }}>
+              <Plus size={14} /> Add Prospect
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Alert Banners */}
+      {highPriority.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", background: "rgba(200,16,46,0.08)", border: "1px solid rgba(200,16,46,0.2)", borderRadius: "0.5rem", marginBottom: "1rem" }}>
+          <AlertTriangle size={16} color="#C8102E" />
+          <span style={{ color: "#F5F0EB", fontSize: "0.82rem" }}><strong style={{ color: "#C8102E" }}>{highPriority.length} high-priority</strong> prospects need follow-up</span>
+        </div>
+      )}
+      {unassigned.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "0.5rem", marginBottom: "1rem" }}>
+          <UserCheck size={16} color="#f59e0b" />
+          <span style={{ color: "#F5F0EB", fontSize: "0.82rem" }}><strong style={{ color: "#f59e0b" }}>{unassigned.length} prospects</strong> not yet assigned to a staff member</span>
+        </div>
+      )}
 
       {/* Pipeline Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.5rem", marginBottom: "2rem" }}>
@@ -158,64 +183,115 @@ export default function Prospects() {
         })}
       </div>
 
-      {/* Prospects Table */}
+      {/* Filters */}
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: "0.4rem 0.75rem", background: "#1A1614", border: "1px solid rgba(245,240,235,0.12)", borderRadius: "0.25rem", color: filterStatus !== "all" ? "#F5F0EB" : "#6B6560", fontSize: "0.78rem", cursor: "pointer" }}>
+          <option value="all">All Statuses</option>
+          {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={{ padding: "0.4rem 0.75rem", background: "#1A1614", border: "1px solid rgba(245,240,235,0.12)", borderRadius: "0.25rem", color: filterSource !== "all" ? "#F5F0EB" : "#6B6560", fontSize: "0.78rem", cursor: "pointer" }}>
+          <option value="all">All Sources</option>
+          {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} style={{ padding: "0.4rem 0.75rem", background: "#1A1614", border: "1px solid rgba(245,240,235,0.12)", borderRadius: "0.25rem", color: filterPriority !== "all" ? "#F5F0EB" : "#6B6560", fontSize: "0.78rem", cursor: "pointer" }}>
+          <option value="all">All Priorities</option>
+          <option value="High">🔴 High</option>
+          <option value="Medium">🟡 Medium</option>
+          <option value="Low">⚪ Low</option>
+        </select>
+        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", color: "#6B6560", fontSize: "0.75rem" }}>{filtered.length} prospect{filtered.length !== 1 ? "s" : ""}</span>
+      </div>
+
+      {/* Ranked Prospect Cards */}
       {filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "4rem 2rem", color: "#6B6560" }}>
           <Users size={48} style={{ marginBottom: "1rem", opacity: 0.3 }} />
           <p style={{ fontSize: "1rem" }}>No prospects {filterStatus !== "all" ? `with status "${filterStatus}"` : "yet"}.</p>
-          <p style={{ fontSize: "0.82rem" }}>Add prospects from Typeform inquiries, walk-ins, or referrals.</p>
+          {filterSource === "all" && filterStatus === "all" && (
+            <p style={{ fontSize: "0.82rem" }}>Click “Import from Lightspeed” to auto-pull frequent visitors (3+/mo, $50+/visit) or add prospects manually.</p>
+          )}
         </div>
       ) : (
-        <div style={{ background: "#1A1614", border: "1px solid rgba(245,240,235,0.08)", borderRadius: "0.5rem", overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid rgba(245,240,235,0.08)" }}>
-                {["Name", "Contact", "Tier Interest", "Source", "Referred By", "Status", ""].map(h => (
-                  <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", color: "#6B6560", fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.06em" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p: any) => {
-                const cfg = STATUS_COLORS[p.status] || STATUS_COLORS["New"];
-                return (
-                  <tr key={p.id} style={{ borderBottom: "1px solid rgba(245,240,235,0.05)" }}>
-                    <td style={{ padding: "0.875rem 1rem" }}>
-                      <div style={{ color: "#F5F0EB", fontSize: "0.9rem", fontWeight: 600 }}>{p.name}</div>
-                      {p.notes && <div style={{ color: "#6B6560", fontSize: "0.75rem", marginTop: 2 }}>{p.notes.slice(0, 40)}{p.notes.length > 40 ? "…" : ""}</div>}
-                    </td>
-                    <td style={{ padding: "0.875rem 1rem" }}>
-                      {p.email && <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#6B6560", fontSize: "0.78rem" }}><Mail size={11} />{p.email}</div>}
-                      {p.phone && <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#6B6560", fontSize: "0.78rem" }}><Phone size={11} />{p.phone}</div>}
-                    </td>
-                    <td style={{ padding: "0.875rem 1rem" }}>
-                      <span style={{ padding: "0.2rem 0.5rem", borderRadius: "0.2rem", background: p.interestedTier === "APEX" ? "rgba(200,16,46,0.15)" : "rgba(245,240,235,0.06)", color: p.interestedTier === "APEX" ? "#C8102E" : "#A09890", fontSize: "0.75rem", fontWeight: 600 }}>
-                        {p.interestedTier || "—"}
-                      </span>
-                    </td>
-                    <td style={{ padding: "0.875rem 1rem", color: "#6B6560", fontSize: "0.82rem" }}>{p.source || "—"}</td>
-                    <td style={{ padding: "0.875rem 1rem", color: "#6B6560", fontSize: "0.82rem" }}>{p.referredBy || "—"}</td>
-                    <td style={{ padding: "0.875rem 1rem" }}>
-                      <span style={{ padding: "0.2rem 0.6rem", borderRadius: "0.2rem", background: cfg.bg, color: cfg.color, fontSize: "0.72rem", fontWeight: 600 }}>{p.status}</span>
-                    </td>
-                    <td style={{ padding: "0.875rem 1rem" }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'nowrap' }}>
-                        {isAuthenticated && p.status !== 'Tour Scheduled' && p.status !== 'Closed Won' && (
-                          <button onClick={() => bookTour.mutate({ id: p.id, name: p.name, email: p.email || undefined, phone: p.phone || undefined, tier: p.interestedTier || undefined })} disabled={bookTour.isPending} style={{ padding: '0.2rem 0.45rem', borderRadius: '0.2rem', background: 'rgba(196,163,90,0.15)', color: '#C4A35A', border: '1px solid rgba(196,163,90,0.3)', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Book Tour</button>
-                        )}
-                        {isAuthenticated && p.status !== 'Closed Won' && (
-                          <button onClick={() => convertToMember.mutate({ id: p.id, name: p.name, email: p.email || undefined, tier: p.interestedTier || undefined })} disabled={convertToMember.isPending} style={{ padding: '0.2rem 0.45rem', borderRadius: '0.2rem', background: 'rgba(200,16,46,0.12)', color: '#C8102E', border: '1px solid rgba(200,16,46,0.25)', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Convert</button>
-                        )}
-                        {isAuthenticated && (
-                          <button onClick={() => openEdit(p)} style={{ background: 'none', border: 'none', color: '#6B6560', cursor: 'pointer', padding: '0.2rem' }}><Edit2 size={13} /></button>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+          {filtered.map((p: any, idx: number) => {
+            const cfg = STATUS_COLORS[p.status] || STATUS_COLORS["New"];
+            const pCfg = PRIORITY_COLORS[p.priority || "Medium"];
+            const spendPerVisit = p.visitCount > 0 ? Math.round((p.totalSpend || 0) / p.visitCount / 100) : 0;
+            const isLightspeed = p.source === "Lightspeed";
+            return (
+              <div
+                key={p.id}
+                onClick={() => setSelectedProspect(p)}
+                style={{ background: "#1A1614", border: `1px solid ${p.priority === "High" ? "rgba(200,16,46,0.2)" : "rgba(245,240,235,0.08)"}`, borderRadius: "0.5rem", padding: "1rem 1.25rem", cursor: "pointer", transition: "border-color 0.15s" }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+                  {/* Rank badge */}
+                  <div style={{ minWidth: 32, textAlign: "center" }}>
+                    <div style={{ fontSize: "0.65rem", color: "#6B6560", letterSpacing: "0.08em" }}>#{idx + 1}</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: 800, color: (p.prospectScore || 0) >= 70 ? "#22c55e" : (p.prospectScore || 0) >= 45 ? "#f59e0b" : "#6B6560" }}>{p.prospectScore || 0}</div>
+                  </div>
+                  {/* Main info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.3rem" }}>
+                      <span style={{ color: "#F5F0EB", fontSize: "0.95rem", fontWeight: 700 }}>{p.name}</span>
+                      <span style={{ fontSize: "0.65rem", padding: "0.1rem 0.4rem", borderRadius: "0.2rem", background: pCfg.bg, color: pCfg.color, fontWeight: 700 }}>{p.priority || "Medium"}</span>
+                      <span style={{ fontSize: "0.65rem", padding: "0.1rem 0.4rem", borderRadius: "0.2rem", background: cfg.bg, color: cfg.color, fontWeight: 600 }}>{p.status}</span>
+                      {isLightspeed && <span style={{ fontSize: "0.65rem", padding: "0.1rem 0.4rem", borderRadius: "0.2rem", background: "rgba(196,163,90,0.12)", color: "#C4A35A" }}>Lightspeed</span>}
+                      {p.source && !isLightspeed && <span style={{ fontSize: "0.65rem", padding: "0.1rem 0.4rem", borderRadius: "0.2rem", background: "rgba(245,240,235,0.06)", color: "#6B6560" }}>{p.source}</span>}
+                    </div>
+                    {/* Contact info row */}
+                    <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "0.4rem" }}>
+                      {p.phone && (
+                        <a href={`tel:${p.phone}`} onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#A09890", fontSize: "0.78rem", textDecoration: "none" }}>
+                          <Phone size={11} color="#C8102E" /> {p.phone}
+                        </a>
+                      )}
+                      {p.email && (
+                        <a href={`mailto:${p.email}`} onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#A09890", fontSize: "0.78rem", textDecoration: "none" }}>
+                          <Mail size={11} color="#C8102E" /> {p.email}
+                        </a>
+                      )}
+                      {!p.phone && !p.email && <span style={{ color: "#6B6560", fontSize: "0.75rem", fontStyle: "italic" }}>No contact info</span>}
+                    </div>
+                    {/* Lightspeed stats */}
+                    {isLightspeed && p.visitCount > 0 && (
+                      <div style={{ display: "flex", gap: "1.25rem", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "0.75rem", color: "#6B6560" }}>
+                          <span style={{ color: "#C4A35A", fontWeight: 700 }}>{p.visitCount}</span> visits/mo
+                        </span>
+                        <span style={{ fontSize: "0.75rem", color: "#6B6560" }}>
+                          <span style={{ color: "#22c55e", fontWeight: 700 }}>${spendPerVisit}</span>/visit avg
+                        </span>
+                        {p.totalSpend > 0 && (
+                          <span style={{ fontSize: "0.75rem", color: "#6B6560" }}>
+                            90-day total: <span style={{ color: "#F5F0EB" }}>${(p.totalSpend / 100).toFixed(0)}</span>
+                          </span>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    )}
+                    {p.assignedStaffName && (
+                      <div style={{ marginTop: "0.3rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                        <UserCheck size={11} color="#3b82f6" />
+                        <span style={{ fontSize: "0.72rem", color: "#3b82f6" }}>Assigned: {p.assignedStaffName}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Score bar (right side) */}
+                  <div style={{ minWidth: 100 }}>
+                    <ScoreBar score={p.prospectScore || 0} />
+                    <div style={{ display: "flex", gap: "0.3rem", marginTop: "0.5rem", justifyContent: "flex-end" }}>
+                      {isAuthenticated && p.status !== "Tour Scheduled" && p.status !== "Closed Won" && (
+                        <button onClick={e => { e.stopPropagation(); bookTour.mutate({ id: p.id, name: p.name, email: p.email || undefined, phone: p.phone || undefined, tier: p.interestedTier || undefined }); }} disabled={bookTour.isPending} style={{ padding: "0.2rem 0.45rem", borderRadius: "0.2rem", background: "rgba(196,163,90,0.15)", color: "#C4A35A", border: "1px solid rgba(196,163,90,0.3)", cursor: "pointer", fontSize: "0.65rem", fontWeight: 600 }}>Tour</button>
+                      )}
+                      {isAuthenticated && (
+                        <button onClick={e => { e.stopPropagation(); openEdit(p); }} style={{ background: "none", border: "none", color: "#6B6560", cursor: "pointer", padding: "0.2rem" }}><Edit2 size={12} /></button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
