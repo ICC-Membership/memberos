@@ -7,8 +7,9 @@
  * - Event Attendee Tracker
  * - Prospect Outreach Generator (AI)
  */
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 import {
   Zap,
   Users,
@@ -29,21 +30,6 @@ const BORDER = "#2A2A2A";
 const MUTED = "#3A3A3A";
 const TEXT = "#E8E4DC";
 const TEXT_DIM = "#6B6560";
-
-// --- Mock Data ---
-const staffLeaderboard = [
-  { rank: 1, name: "Brandon Frakes", referrals: 8, target: 10, payout: "$750", trend: "+2 this week" },
-  { rank: 2, name: "Nathan Frakes", referrals: 5, target: 10, payout: "$375", trend: "+1 this week" },
-  { rank: 3, name: "Alejandra Frakes", referrals: 3, target: 10, payout: "$150", trend: "No change" },
-  { rank: 4, name: "Lydia Marruffo", referrals: 2, target: 10, payout: "$150", trend: "+1 this week" },
-];
-
-const atRiskMembers = [
-  { name: "Marcus T.", tier: "APEX", lastVisit: "47 days ago", spend: "$2,400/yr", action: "Call" },
-  { name: "James R.", tier: "Atabey", lastVisit: "38 days ago", spend: "$1,800/yr", action: "Email" },
-  { name: "David K.", tier: "Atabey", lastVisit: "35 days ago", spend: "$1,600/yr", action: "Email" },
-  { name: "Carlos M.", tier: "Visionary", lastVisit: "31 days ago", spend: "$900/yr", action: "Text" },
-];
 
 const eventAttendees = [
   { name: "Tyler W.", event: "Whiskey & Cigars Night", date: "Mar 14", isMember: false, followedUp: false },
@@ -139,6 +125,45 @@ export default function GrowthEngine() {
   const [generatedMessage, setGeneratedMessage] = useState("");
   const [followedUp, setFollowedUp] = useState<Record<number, boolean>>({});
 
+  // Live data
+  const { data: liveStats } = trpc.shopify.liveStats.useQuery();
+  const { data: staffLeaderboardData } = trpc.staff.getLeaderboard.useQuery();
+  const { data: winbackCandidates } = trpc.winback.candidates.useQuery();
+
+  const activeCount = liveStats?.active ?? 0;
+
+  // Build staff leaderboard from live DB data
+  const staffLeaderboard = useMemo(() => {
+    if (!staffLeaderboardData || staffLeaderboardData.length === 0) return [];
+    return staffLeaderboardData.slice(0, 6).map((s: any, i: number) => ({
+      rank: i + 1,
+      name: s.name,
+      referrals: s.closedQtr ?? 0,
+      target: 10,
+      payout: s.closedQtr && s.closedQtr >= 10
+        ? '$1,000'
+        : s.closedQtr && s.closedQtr >= 5
+        ? `$${(s.closedQtr ?? 0) * 75}`
+        : `$${(s.closedQtr ?? 0) * 50}`,
+      trend: s.toursGivenQtr ? `${s.toursGivenQtr} tours this qtr` : 'No tours yet',
+    }));
+  }, [staffLeaderboardData]);
+
+  // At-risk members from win-back candidates (paused only, sorted by score)
+  const atRiskMembers = useMemo(() => {
+    if (!winbackCandidates) return [];
+    return winbackCandidates
+      .filter((c: any) => c.status === 'Paused')
+      .slice(0, 5)
+      .map((c: any) => ({
+        name: c.name,
+        tier: c.tier ?? 'Visionary',
+        lastVisit: c.daysSince ? `${c.daysSince} days ago` : 'Unknown',
+        spend: c.monthlyRate ? `$${(c.monthlyRate * 12).toLocaleString()}/yr` : '—',
+        action: c.tier === 'APEX' ? 'Call' : c.tier === 'Atabey' ? 'Email' : 'Text',
+      }));
+  }, [winbackCandidates]);
+
   const generateOutreach = () => {
     const template = outreachTemplates[selectedTemplate] || "";
     const personalized = template.replace("[Name]", prospectName || "[Name]");
@@ -172,7 +197,7 @@ export default function GrowthEngine() {
           style={{ background: "rgba(200,16,46,0.10)", border: "1px solid rgba(200,16,46,0.25)" }}
         >
           <Target size={14} style={{ color: ICC_RED }} />
-          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: ICC_RED }}>135 → 200 Members</span>
+          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: ICC_RED }}>{activeCount || '—'} → 200 Members</span>
         </div>
       </div>
 

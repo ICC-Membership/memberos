@@ -2,6 +2,7 @@
  * APEX Quarterly Review — ICC Membership OS
  * Atabey members ranked by Power Score for APEX lounge invitation
  */
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Trophy, Star, TrendingUp, RefreshCw, CheckCircle, Clock } from "lucide-react";
@@ -22,6 +23,7 @@ function ScoreBar({ value, max, color }: { value: number; max: number; color: st
 }
 
 export default function ApexReview() {
+  const [draftingFor, setDraftingFor] = useState<number | null>(null);
   const { data, isLoading, refetch } = trpc.apexReview.candidates.useQuery();
   const setEligible = trpc.apexReview.setApexEligible.useMutation({
     onSuccess: () => {
@@ -29,6 +31,16 @@ export default function ApexReview() {
       refetch();
     },
     onError: (err) => toast.error(err.message),
+  });
+  const draftInvite = trpc.apexReview.draftInvite.useMutation({
+    onSuccess: () => {
+      setDraftingFor(null);
+      toast.success('APEX invite drafted — check Email Hub');
+    },
+    onError: (err) => {
+      setDraftingFor(null);
+      toast.error(err.message);
+    },
   });
 
   const candidates = data?.candidates ?? [];
@@ -192,27 +204,56 @@ export default function ApexReview() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => setEligible.mutate({ memberId: c.id, eligible: !c.apexEligible })}
-                      disabled={setEligible.isPending}
-                      className="flex items-center gap-1.5 px-2 py-1 rounded transition-all"
-                      style={{
-                        fontSize: "0.68rem",
-                        background: c.apexEligible ? `${GOLD}22` : "transparent",
-                        color: c.apexEligible ? GOLD : "#3A3A3A",
-                        border: `1px solid ${c.apexEligible ? `${GOLD}44` : "#2A2A2A"}`,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {c.apexEligible ? (
-                        <>
-                          <CheckCircle size={10} />
-                          Eligible
-                        </>
-                      ) : (
-                        "Mark"
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setEligible.mutate({ memberId: c.id, eligible: !c.apexEligible })}
+                        disabled={setEligible.isPending}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded transition-all"
+                        style={{
+                          fontSize: "0.68rem",
+                          background: c.apexEligible ? `${GOLD}22` : "transparent",
+                          color: c.apexEligible ? GOLD : "#3A3A3A",
+                          border: `1px solid ${c.apexEligible ? `${GOLD}44` : "#2A2A2A"}`,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {c.apexEligible ? (
+                          <>
+                            <CheckCircle size={10} />
+                            Eligible
+                          </>
+                        ) : (
+                          "Mark"
+                        )}
+                      </button>
+                      {c.apexEligible && (
+                        <button
+                          onClick={() => {
+                            setDraftingFor(c.id);
+                            draftInvite.mutate({
+                              memberId: c.id,
+                              name: c.name,
+                              email: c.email,
+                              totalScore: c.totalScore,
+                              tenureScore: c.tenureScore,
+                            });
+                          }}
+                          disabled={draftingFor === c.id}
+                          className="flex items-center gap-1 px-2 py-1 rounded"
+                          style={{
+                            fontSize: "0.68rem",
+                            color: "#C8102E",
+                            border: "1px solid rgba(200,16,46,0.3)",
+                            background: "rgba(200,16,46,0.08)",
+                            cursor: draftingFor === c.id ? 'not-allowed' : 'pointer',
+                            opacity: draftingFor === c.id ? 0.6 : 1,
+                          }}
+                        >
+                          <Star size={10} />
+                          <span>{draftingFor === c.id ? 'Drafting...' : 'Invite'}</span>
+                        </button>
                       )}
-                    </button>
+                    </div>
                   </td>
                 </tr>
               ))}

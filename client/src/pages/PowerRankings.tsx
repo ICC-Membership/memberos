@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { Trophy, Star, TrendingUp, RefreshCw, Zap } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 const SCORING_CRITERIA = [
   { category: "Visits", max: 30, color: "#8899CC", description: "Monthly lounge visits (3 pts each, max 10 visits)" },
@@ -39,6 +40,14 @@ export default function PowerRankings() {
 
   const { data: members = [], isLoading } = trpc.members.list.useQuery();
   const { data: lsStatus } = trpc.lightspeed.status.useQuery();
+  const utils = trpc.useUtils();
+  const computeScores = trpc.scores.compute.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Scores recomputed for ${data.updated} members`);
+      utils.members.list.invalidate();
+    },
+    onError: () => toast.error('Score computation failed — are you logged in?'),
+  });
 
   // Build ranked list from live DB data
   const ranked = (members as any[])
@@ -75,6 +84,15 @@ export default function PowerRankings() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => computeScores.mutate()}
+            disabled={computeScores.isPending}
+            className="px-3 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-1.5"
+            style={{ background: "rgba(200,16,46,0.12)", color: "#C8102E", border: "1px solid rgba(200,16,46,0.30)" }}
+          >
+            <RefreshCw size={11} className={computeScores.isPending ? 'animate-spin' : ''} />
+            {computeScores.isPending ? 'Computing...' : 'Recompute Scores'}
+          </button>
           {(["All", "APEX", "Atabey", "Visionary"] as const).map(t => (
             <button
               key={t}

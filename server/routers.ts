@@ -405,6 +405,52 @@ Write a warm, professional reply. Keep it concise and helpful.`,
 
       return candidates;
     }),
+    // Queue an AI-generated re-engagement email draft for a specific candidate
+    draftReengagement: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        email: z.string().optional(),
+        tier: z.string(),
+        daysSince: z.number(),
+        monthlyRate: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const firstName = input.name.split(' ')[0];
+        const tierContext = input.tier === 'APEX'
+          ? 'They were an APEX member — our most exclusive tier. Emphasize the private APEX lounge, quarterly events, and personal connection.'
+          : input.tier === 'Atabey'
+          ? 'They were an Atabey member. Highlight new lounge additions, events, and the premium experience.'
+          : 'They were a Visionary member. Keep it warm and low-pressure, focus on community and value.';
+        const aiResponse = await invokeLLM({
+          messages: [
+            {
+              role: 'system',
+              content: `You are Andrew Frakes, Head of Membership at Industrial Cigar Company in Frisco, Texas — one of the world's premier cigar lounges. Write a warm, personal win-back email to a former member. ${tierContext} Keep it under 150 words, personal, and end with a clear soft call to action (reply to chat, come in for a smoke, etc.). Do NOT use generic marketing language.`
+            },
+            {
+              role: 'user',
+              content: `Write a win-back email for ${input.name} (${input.tier} tier). They cancelled/paused ${input.daysSince} days ago. Monthly rate was $${input.monthlyRate || 0}.`
+            }
+          ]
+        });
+        const draft = (aiResponse.choices?.[0]?.message?.content as string) || '';
+        // Queue the draft in the email queue
+        const db = await getDb();
+        if (db) {
+          const { emailDraftQueue } = await import('../drizzle/schema');
+          await db.insert(emailDraftQueue).values({
+            toEmail: input.email || '',
+            memberName: input.name,
+            subject: `We miss you at ICC, ${firstName}`,
+            body: draft,
+            type: 'winback_draft',
+            tier: input.tier,
+            monthlyRate: input.monthlyRate,
+            status: 'pending',
+          });
+        }
+        return { draft, queued: true };
+      }),
   }),
 
   apexReview: router({
@@ -443,6 +489,45 @@ Write a warm, professional reply. Keep it concise and helpful.`,
       .mutation(async ({ input }) => {
         await upsertMember({ id: input.memberId, name: '', apexEligible: input.eligible } as any);
         return { success: true };
+      }),
+    // Draft a personalized APEX invitation email for an eligible Atabey member
+    draftInvite: protectedProcedure
+      .input(z.object({
+        memberId: z.number(),
+        name: z.string(),
+        email: z.string().optional(),
+        totalScore: z.number(),
+        tenureScore: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const firstName = input.name.split(' ')[0];
+        const aiResponse = await invokeLLM({
+          messages: [
+            {
+              role: 'system',
+              content: `You are Andrew Frakes, Head of Membership at Industrial Cigar Company in Frisco, Texas. Write a warm, exclusive, personal invitation email to an Atabey member who has earned an invitation to the APEX Lounge — our most exclusive private space. The tone should feel like a personal note from Andrew, not a marketing email. Mention their loyalty and tenure as a member. Keep it under 120 words. End with an invitation to come in for a private tour of the APEX Lounge.`
+            },
+            {
+              role: 'user',
+              content: `Write an APEX invitation for ${input.name}. They have a Power Score of ${input.totalScore} and have been a member for approximately ${Math.round(input.tenureScore / 1.5)} months.`
+            }
+          ]
+        });
+        const draft = (aiResponse.choices?.[0]?.message?.content as string) || '';
+        const db = await getDb();
+        if (db) {
+          const { emailDraftQueue } = await import('../drizzle/schema');
+          await db.insert(emailDraftQueue).values({
+            toEmail: input.email || '',
+            memberName: input.name,
+            subject: `${firstName}, you've been invited to the APEX Lounge`,
+            body: draft,
+            type: 'apex_invite',
+            tier: 'Atabey',
+            status: 'pending',
+          });
+        }
+        return { draft, queued: true };
       }),
   }),
 
@@ -611,6 +696,32 @@ Write a warm, professional reply. Keep it concise and helpful.`,
         const tours = await db.select().from(tourLogs).where(eq(tourLogs.memberId, input.memberId));
         return { member, locker, tours };
       }),
+  }),
+
+  scores: router({
+    // Compute tenure + tier scores for all active members
+    compute: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('DB unavailable');
+      const { members } = await import('../drizzle/schema');
+      const allActive = await db.select().from(members).where(eq(members.status, 'Active'));
+      const now = new Date();
+      let updated = 0;
+      for (const m of allActive) {
+        const monthsAsMember = m.joinedAt
+          ? (now.getTime() - new Date(m.joinedAt).getTime()) / (1000 * 60 * 60 * 24 * 30)
+          : 0;
+        const tenureScore = Math.min(15, Math.round(monthsAsMember * 1.5));
+        const tierScore = m.tier === 'APEX' ? 30 : m.tier === 'Atabey' ? 20 : 10;
+        const totalScore = (m.visitScore || 0) + (m.spendScore || 0) + (m.referralScore || 0) + tenureScore + (m.eventScore || 0) + tierScore;
+        const apexEligible = m.tier === 'APEX' || (m.tier === 'Atabey' && totalScore >= 28);
+        await db.update(members)
+          .set({ tenureScore, totalScore, apexEligible })
+          .where(eq(members.id, m.id));
+        updated++;
+      }
+      return { updated };
+    }),
   }),
 
   dashboard: router({

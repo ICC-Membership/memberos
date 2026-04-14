@@ -20,6 +20,7 @@ import CommissionTracker from "./pages/CommissionTracker";
 import Member360 from "./pages/Member360";
 import WinBack from "./pages/WinBack";
 import ApexReview from "./pages/ApexReview";
+import LitVentures from "./pages/LitVentures";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function Router() {
         <Route path="/member360" component={Member360} />
         <Route path="/win-back" component={WinBack} />
         <Route path="/apex-review" component={ApexReview} />
+        <Route path="/lit-ventures" component={LitVentures} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>

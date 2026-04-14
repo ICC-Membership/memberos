@@ -109,8 +109,19 @@ export default function WinBack() {
   const [priorityFilter, setPriorityFilter] = useState<"ALL" | "HIGH" | "MEDIUM">("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "Cancelled" | "Paused">("ALL");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [draftingFor, setDraftingFor] = useState<string | null>(null);
 
   const { data: candidates = [], isLoading, refetch } = trpc.winback.candidates.useQuery();
+  const draftEmail = trpc.winback.draftReengagement.useMutation({
+    onSuccess: () => {
+      setDraftingFor(null);
+      toast.success('Re-engagement draft queued — check Email Hub');
+    },
+    onError: () => {
+      setDraftingFor(null);
+      toast.error('Failed to queue draft');
+    },
+  });
 
   const filtered = (candidates as any[]).filter(c => {
     const matchPriority = priorityFilter === "ALL" || c.priority === priorityFilter;
@@ -312,6 +323,33 @@ export default function WinBack() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
+                      {/* AI Draft button */}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setDraftingFor(key);
+                          draftEmail.mutate({
+                            name: candidate.name,
+                            email: candidate.email,
+                            tier: candidate.tier,
+                            daysSince: candidate.daysSince,
+                            monthlyRate: candidate.monthlyRate,
+                          });
+                        }}
+                        disabled={draftingFor === key}
+                        className="flex items-center gap-1 px-2 py-1.5 rounded"
+                        style={{
+                          fontSize: "0.68rem",
+                          color: "#C4A35A",
+                          border: "1px solid rgba(196,163,90,0.3)",
+                          background: "rgba(196,163,90,0.08)",
+                          cursor: draftingFor === key ? 'not-allowed' : 'pointer',
+                          opacity: draftingFor === key ? 0.6 : 1,
+                        }}
+                      >
+                        <Star size={11} />
+                        <span>{draftingFor === key ? 'Drafting...' : 'AI Draft'}</span>
+                      </button>
                       {candidate.email && (
                         <a
                           href={`mailto:${candidate.email}?subject=We miss you at ICC&body=${encodeURIComponent(emailTemplate)}`}

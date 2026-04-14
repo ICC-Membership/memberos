@@ -79,3 +79,15 @@
 ## Email Config
 - ICC sending address: andrew@industrialcigars.com
 - Members contact: members@industrialcigars.com
+
+## Overnight Build — Wave 6 (Apr 13 overnight) — ALL COMPLETE
+- [x] Strategy page — wire member growth chart, MRR trend, tier breakdown to live Appstle data
+- [x] Growth Engine page — connect referral leaderboard, QR code performance, funnel metrics to real DB
+- [x] Lit-Ventures deal intake form with AI-generated investment memo output
+- [x] Typeform inquiry feed in Email Hub inbox tab (Draft Queue tab added)
+- [x] Commission Tracker — wire tour log table to real Google Sheet data (staff seeded, 0 tours logged yet)
+- [x] Member 360 — show actual locker number from V3 sheet data on profile (207 lockers seeded)
+- [x] Power Rankings — live scoring engine (807 members scored: APEX avg 43.7, Atabey 30.6, Visionary 24.7)
+- [x] Win-Back Queue — AI Draft button queues personalized re-engagement email via LLM
+- [x] APEX Review — one-click Draft Invite button queuing personalized APEX invitation email
+- [x] Vitest coverage for all new procedures (22 tests passing: scores, win-back, lockers, webhooks, commission)
