@@ -67,20 +67,20 @@
 
   /* Semantic tokens mapped to ICC brand */
   --background: oklch(0.08 0.002 50);
-  --foreground: oklch(0.90 0.008 72);
+  --foreground: oklch(0.93 0.008 72);
   --card: oklch(0.11 0.003 50);
-  --card-foreground: oklch(0.90 0.008 72);
+  --card-foreground: oklch(0.93 0.008 72);
   --popover: oklch(0.12 0.003 50);
-  --popover-foreground: oklch(0.90 0.008 72);
+  --popover-foreground: oklch(0.93 0.008 72);
   /* ICC Red as primary */
   --primary: oklch(0.45 0.20 25);
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.15 0.003 50);
   --secondary-foreground: oklch(0.75 0.008 72);
   --muted: oklch(0.14 0.003 50);
-  --muted-foreground: oklch(0.48 0.008 65);
+  --muted-foreground: oklch(0.58 0.008 65);
   --accent: oklch(0.16 0.003 50);
-  --accent-foreground: oklch(0.90 0.008 72);
+  --accent-foreground: oklch(0.93 0.008 72);
   --destructive: oklch(0.50 0.20 25);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.20 0.003 50);
@@ -103,19 +103,19 @@
 
 .dark {
   --background: oklch(0.08 0.002 50);
-  --foreground: oklch(0.90 0.008 72);
+  --foreground: oklch(0.93 0.008 72);
   --card: oklch(0.11 0.003 50);
-  --card-foreground: oklch(0.90 0.008 72);
+  --card-foreground: oklch(0.93 0.008 72);
   --popover: oklch(0.12 0.003 50);
-  --popover-foreground: oklch(0.90 0.008 72);
+  --popover-foreground: oklch(0.93 0.008 72);
   --primary: oklch(0.45 0.20 25);
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.15 0.003 50);
   --secondary-foreground: oklch(0.75 0.008 72);
   --muted: oklch(0.14 0.003 50);
-  --muted-foreground: oklch(0.48 0.008 65);
+  --muted-foreground: oklch(0.58 0.008 65);
   --accent: oklch(0.16 0.003 50);
-  --accent-foreground: oklch(0.90 0.008 72);
+  --accent-foreground: oklch(0.93 0.008 72);
   --destructive: oklch(0.50 0.20 25);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.20 0.003 50);
@@ -143,17 +143,53 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 14px;
+    font-size: 15px;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     background-color: #0D0D0D;
+    letter-spacing: 0.01em;
   }
   h1, h2 {
     font-family: 'Bebas Neue', 'Impact', sans-serif;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
+    line-height: 1.1;
   }
-  h3, h4 {
+  h3 {
     font-family: 'Inter', sans-serif;
     font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+  }
+  h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  p {
+    line-height: 1.65;
+  }
+  /* Table readability */
+  table {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: oklch(0.62 0.008 65);
+  }
+  td {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+  /* Input readability */
+  input, textarea, select {
+    font-size: 0.9375rem;
+    line-height: 1.5;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -191,7 +227,7 @@
     color: white;
     font-family: 'Inter', sans-serif;
     font-weight: 600;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     padding: 0.5rem 1rem;
     border-radius: 0.25rem;
     border: none;
@@ -203,8 +239,8 @@
   /* Ghost button */
   .btn-ghost {
     background: transparent;
-    color: oklch(0.55 0.003 50);
-    font-size: 0.8125rem;
+    color: oklch(0.65 0.003 50);
+    font-size: 0.875rem;
     font-weight: 500;
     padding: 0.5rem 1rem;
     border-radius: 0.25rem;
@@ -240,9 +276,9 @@
     gap: 0.625rem;
     padding: 0.5rem 0.875rem;
     border-radius: 0.25rem;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 500;
-    color: oklch(0.48 0.008 65);
+    color: oklch(0.60 0.008 65);
     border-left: 2px solid transparent;
     transition: all 0.15s ease;
     text-decoration: none;

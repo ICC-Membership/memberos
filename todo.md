@@ -152,3 +152,9 @@
 - [ ] Composite prospect score: 60% visit frequency rank + 40% spend-per-visit rank
 - [ ] Ranked list view: sort by composite score descending, show visits/mo, spend/visit, contact info
 - [ ] Contact info visible on prospect card: name, phone, email, last visit date
+
+## User Feedback — Apr 14 (Typography Readability)
+- [x] Improve global font readability: larger body text, better line height, cleaner body font
+- [x] Increase contrast on muted text (labels, secondary info) for easier scanning
+- [x] Ensure headings use Bebas Neue at readable sizes, body uses Inter at 15-16px base
+- [x] Improve table row readability: larger text, better row spacing
