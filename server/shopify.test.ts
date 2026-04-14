@@ -2,9 +2,14 @@ import { describe, it, expect } from "vitest";
 
 describe("Shopify API credentials", () => {
   it("should connect to Shopify and return a valid customer count", async () => {
-    const storeDomain = "08bcdd.myshopify.com";
-    const clientId = "18fba4909846beb773eee84e840c0999";
-    const clientSecret = "SHOPIFY_SECRET_REMOVED";
+    const storeDomain = process.env.SHOPIFY_STORE_DOMAIN || "";
+    const clientId = process.env.SHOPIFY_CLIENT_ID || "";
+    const clientSecret = process.env.SHOPIFY_CLIENT_SECRET || "";
+
+    if (!storeDomain || !clientId || !clientSecret) {
+      console.warn("Shopify env vars not set — skipping live API test");
+      return;
+    }
 
     // Get access token
     const tokenRes = await fetch(`https://${storeDomain}/admin/oauth/access_token`, {
