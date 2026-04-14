@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import {
   Search, X, Key, Users, Lock, Unlock, History, ArrowRight,
   Phone, Mail, Calendar, Edit3, AlertTriangle, CheckCircle,
+  Upload, Download, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -623,6 +624,24 @@ export default function LockerDiagram() {
   const { data: membersRaw } = trpc.members.list.useQuery();
   const members = membersRaw ?? [];
 
+  // Lightspeed customer search for assign modal
+  const [lsQuery, setLsQuery] = useState("");
+  const { data: lsSearch } = trpc.lightspeed.searchCustomer.useQuery(
+    { query: lsQuery },
+    { enabled: lsQuery.length >= 2 }
+  );
+
+  // Google Sheets sync
+  const { data: sheetStatus } = trpc.lockers.sheetSyncStatus.useQuery();
+  const exportToSheet = trpc.lockers.exportToSheet.useMutation({
+    onSuccess: (d) => toast.success(`Exported ${d.updated} lockers to Google Sheet`),
+    onError: (e) => toast.error(`Export failed: ${e.message}`),
+  });
+  const importFromSheet = trpc.lockers.importFromSheet.useMutation({
+    onSuccess: (d) => toast.success(`Synced ${d.synced} lockers from Google Sheet${d.errors.length ? ` (${d.errors.length} errors)` : ""}`),
+    onError: (e) => toast.error(`Import failed: ${e.message}`),
+  });
+
   const { data: historyData = [], refetch: refetchHistory } = trpc.lockers.moveHistory.useQuery(
     { lockerNumber: selectedLocker?.number },
     { enabled: showHistory && !!selectedLocker }
@@ -691,11 +710,40 @@ export default function LockerDiagram() {
         <p style={{ fontSize: "0.72rem", color: "#4A4540", margin: 0 }}>
           207 total lockers across 3 banks · Click any locker to view details, assign, or edit key code
         </p>
-        {/* Google Sheet sync note */}
-        <div style={{ marginTop: "8px", padding: "8px 12px", borderRadius: "6px", background: "rgba(136,153,204,0.06)", border: "1px solid rgba(136,153,204,0.15)", fontSize: "0.7rem", color: "#6B6560" }}>
-          <span style={{ color: SILVER, fontWeight: 600 }}>Google Sheet Sync: </span>
-          The locker data is currently seeded from the V3 Locker Diagram sheet. Once Lightspeed is connected, member payment status will auto-sync.
-          To push changes back to Google Sheets, use the "Export to Sheet" button (coming with Sheets integration). Until then, this diagram is the source of truth — update it here and copy changes to the sheet manually.
+        {/* Google Sheet sync buttons */}
+        <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          {sheetStatus?.configured ? (
+            <>
+              <a
+                href={sheetStatus.sheetUrl ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: "0.68rem", color: SILVER, textDecoration: "none" }}
+              >
+                ↗ Open Google Sheet
+              </a>
+              <button
+                onClick={() => exportToSheet.mutate()}
+                disabled={exportToSheet.isPending}
+                style={{ display: "flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "4px", background: "rgba(136,153,204,0.10)", border: "1px solid rgba(136,153,204,0.25)", color: SILVER, fontSize: "0.68rem", cursor: "pointer" }}
+              >
+                {exportToSheet.isPending ? <RefreshCw size={10} className="animate-spin" /> : <Upload size={10} />}
+                Export to Sheet
+              </button>
+              <button
+                onClick={() => importFromSheet.mutate()}
+                disabled={importFromSheet.isPending}
+                style={{ display: "flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "4px", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.20)", color: "#22C55E", fontSize: "0.68rem", cursor: "pointer" }}
+              >
+                {importFromSheet.isPending ? <RefreshCw size={10} className="animate-spin" /> : <Download size={10} />}
+                Import from Sheet
+              </button>
+            </>
+          ) : (
+            <span style={{ fontSize: "0.68rem", color: "#4A4540" }}>
+              Set <code style={{ color: SILVER }}>GOOGLE_SHEETS_LOCKER_ID</code> env var to enable two-way Google Sheet sync.
+            </span>
+          )}
         </div>
       </div>
 
@@ -990,11 +1038,40 @@ export default function LockerDiagram() {
                 <label style={{ fontSize: "0.62rem", color: "#444", letterSpacing: "0.08em", display: "block", marginBottom: "6px" }}>MEMBER NAME</label>
                 <input
                   value={assignForm.memberName}
-                  onChange={e => setAssignForm(f => ({ ...f, memberName: e.target.value }))}
-                  placeholder="e.g. John Smith / Jane Smith"
+                  onChange={e => {
+                    setAssignForm(f => ({ ...f, memberName: e.target.value }));
+                    setLsQuery(e.target.value);
+                  }}
+                  placeholder="e.g. John Smith"
                   style={{ width: "100%", background: "#111", border: "1px solid #222", borderRadius: "4px", padding: "8px", color: "#E8E4DC", fontSize: "0.82rem" }}
                 />
-                {members.length > 0 && assignForm.memberName.length > 1 && (
+                {/* Lightspeed customer suggestions */}
+                {lsSearch?.connected && lsSearch.customers.length > 0 && assignForm.memberName.length >= 2 && (
+                  <div style={{ marginTop: "4px", maxHeight: "140px", overflowY: "auto", background: "#0a0a0a", borderRadius: "4px", border: "1px solid #1a1a1a" }}>
+                    <div style={{ padding: "4px 10px", fontSize: "0.6rem", color: "#444", letterSpacing: "0.06em", borderBottom: "1px solid #1a1a1a" }}>LIGHTSPEED CUSTOMERS</div>
+                    {(lsSearch.customers as any[]).map((c: any) => (
+                      <div
+                        key={c.customerId}
+                        onClick={() => {
+                          setAssignForm(f => ({ ...f, memberName: c.fullName }));
+                          setLsQuery("");
+                        }}
+                        style={{ padding: "6px 10px", fontSize: "0.78rem", color: "#aaa", cursor: "pointer", borderBottom: "1px solid #111" }}
+                      >
+                        <div style={{ color: "#E8E4DC", fontWeight: 500 }}>{c.fullName}</div>
+                        {(c.email || c.phone) && (
+                          <div style={{ fontSize: "0.65rem", color: "#555", marginTop: "1px" }}>
+                            {c.email && <span>{c.email}</span>}
+                            {c.email && c.phone && <span style={{ margin: "0 4px" }}>·</span>}
+                            {c.phone && <span>{c.phone}</span>}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Fallback: DB member suggestions when Lightspeed not connected */}
+                {(!lsSearch?.connected) && members.length > 0 && assignForm.memberName.length > 1 && (
                   <div style={{ marginTop: "4px", maxHeight: "100px", overflowY: "auto", background: "#0a0a0a", borderRadius: "4px", border: "1px solid #1a1a1a" }}>
                     {(members as any[]).filter((m: any) => m.name?.toLowerCase().includes(assignForm.memberName.toLowerCase())).slice(0, 5).map((m: any) => (
                       <div key={m.id} onClick={() => setAssignForm(f => ({ ...f, memberName: m.name }))} style={{ padding: "6px 10px", fontSize: "0.78rem", color: "#aaa", cursor: "pointer" }}>{m.name}</div>

@@ -3,7 +3,7 @@ import { eq, desc, sql } from "drizzle-orm";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { fetchAppstleMembers, getAppstleHealthStats } from "./appstle";
 import { getLightspeedToken, getLightspeedCustomers, getLightspeedSales } from "./lightspeed";
@@ -530,6 +530,42 @@ Write a warm, professional reply. Keep it concise and helpful.`,
       const token = await getLightspeedToken();
       return { connected: !!token, accountId: token?.accountId || null };
     }),
+    // Search Lightspeed customers by name or email — for locker popup auto-populate
+    searchCustomer: protectedProcedure
+      .input(z.object({ query: z.string().min(2) }))
+      .query(async ({ input }) => {
+        const token = await getLightspeedToken();
+        if (!token) return { connected: false, customers: [] };
+        try {
+          const { getLightspeedCustomers } = await import('./lightspeed');
+          const all = await getLightspeedCustomers();
+          const q = input.query.toLowerCase();
+          const matched = all
+            .filter((c: any) => {
+              const fullName = `${c.firstName ?? ''} ${c.lastName ?? ''}`.toLowerCase();
+              const email = (c.Contact?.Emails?.ContactEmail?.[0]?.address ||
+                            c.Contact?.Emails?.ContactEmail?.address || '').toLowerCase();
+              const phone = c.Contact?.Phones?.ContactPhone?.[0]?.number ||
+                            c.Contact?.Phones?.ContactPhone?.number || '';
+              return fullName.includes(q) || email.includes(q) || phone.includes(q);
+            })
+            .slice(0, 10)
+            .map((c: any) => ({
+              customerId: c.customerID,
+              firstName: c.firstName ?? '',
+              lastName: c.lastName ?? '',
+              fullName: `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim(),
+              email: c.Contact?.Emails?.ContactEmail?.[0]?.address ||
+                     c.Contact?.Emails?.ContactEmail?.address || null,
+              phone: c.Contact?.Phones?.ContactPhone?.[0]?.number ||
+                     c.Contact?.Phones?.ContactPhone?.number || null,
+              company: c.company ?? null,
+            }));
+          return { connected: true, customers: matched };
+        } catch (e) {
+          return { connected: true, customers: [], error: String(e) };
+        }
+      }),
     // Identify prospects from Lightspeed POS — frequent visitors not yet members
     prospects: protectedProcedure
       .input(z.object({ minVisits: z.number().default(3) }))
@@ -582,9 +618,15 @@ Write a warm, professional reply. Keep it concise and helpful.`,
     queueStats: protectedProcedure.query(async () => {
       return getQueueStats();
     }),
-    // Manually trigger queue processing (creates Gmail drafts)
-    processQueue: protectedProcedure.mutation(async () => {
-      return { processed: 0, message: "Queue processing handled by agent scheduler" };
+    // Manually trigger queue processing (creates Gmail drafts via gws CLI)
+    processQueue: adminProcedure.mutation(async () => {
+      const { processEmailDraftQueue } = await import('./gmailDraftProcessor');
+      return processEmailDraftQueue();
+    }),
+    // Get Gmail inbox summary for Email Hub
+    gmailInbox: protectedProcedure.query(async () => {
+      const { getGmailInboxSummary } = await import('./gmailDraftProcessor');
+      return getGmailInboxSummary();
     }),
     // Get all dunning members for the admin UI
     dunningMembers: publicProcedure.query(async () => {
@@ -787,7 +829,7 @@ Write a warm, professional reply. Keep it concise and helpful.`,
       // Sort by closedQtr desc, then closedAllTime
       return allStaff.sort((a, b) => (b.closedQtr ?? 0) - (a.closedQtr ?? 0) || (b.closedAllTime ?? 0) - (a.closedAllTime ?? 0));
     }),
-    upsert: protectedProcedure
+    upsert: adminProcedure
       .input(z.object({
         id: z.number().optional(),
         name: z.string(),
@@ -853,7 +895,7 @@ Write a warm, professional reply. Keep it concise and helpful.`,
       const { tourLogs } = await import('../drizzle/schema');
       return db.select().from(tourLogs).orderBy(desc(tourLogs.tourDate)).limit(200);
     }),
-    resetQuarter: protectedProcedure.mutation(async () => {
+    resetQuarter: adminProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error('DB unavailable');
       await db.execute(sql`UPDATE staff SET toursGivenQtr = 0, closedQtr = 0, bonusEligibleQtr = 0`);
@@ -960,6 +1002,25 @@ Write a warm, professional reply. Keep it concise and helpful.`,
         }
         return { success: true, count: input.lockers.length };
       }),
+    // ── Google Sheets two-way sync ───────────────────────────────────────────────
+    exportToSheet: adminProcedure.mutation(async () => {
+      const { exportLockersToSheet } = await import('./lockerSheetSync');
+      return exportLockersToSheet();
+    }),
+    importFromSheet: adminProcedure.mutation(async () => {
+      const { importLockersFromSheet } = await import('./lockerSheetSync');
+      return importLockersFromSheet();
+    }),
+    sheetSyncStatus: adminProcedure.query(async () => {
+      const sheetId = process.env.GOOGLE_SHEETS_LOCKER_ID;
+      const sheetTab = process.env.GOOGLE_SHEETS_LOCKER_TAB ?? 'Lockers';
+      return {
+        configured: Boolean(sheetId),
+        sheetId: sheetId ?? null,
+        sheetTab,
+        sheetUrl: sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}` : null,
+      };
+    }),
   }),
 
   // ─── Member 360 Profile ───────────────────────────────────────────────────────
@@ -983,7 +1044,14 @@ Write a warm, professional reply. Keep it concise and helpful.`,
   }),
 
   scores: router({
-    // Compute tenure + tier scores for all active members
+    // Compute Power Score for all active members.
+    // Algorithm (100 pts max, APEX threshold = 70):
+    //   Visit Frequency  — 35 pts max (auto from Lightspeed, or stored visitScore)
+    //   Spend per Visit  — 25 pts max (auto from Lightspeed, or stored spendScore)
+    //   Referrals        — 20 pts max (manual entry, stored referralScore)
+    //   Tenure           — 10 pts max (1 pt per month as member, capped at 10)
+    //   Event Attendance — 10 pts max (2 pts per event attended, max 5 events)
+    // NOTE: Tier bonus has been intentionally removed. Score reflects behavior only.
     compute: protectedProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error('DB unavailable');
@@ -992,13 +1060,24 @@ Write a warm, professional reply. Keep it concise and helpful.`,
       const now = new Date();
       let updated = 0;
       for (const m of allActive) {
+        // Tenure: 1 pt per month as member, capped at 10
         const monthsAsMember = m.joinedAt
           ? (now.getTime() - new Date(m.joinedAt).getTime()) / (1000 * 60 * 60 * 24 * 30)
           : 0;
-        const tenureScore = Math.min(15, Math.round(monthsAsMember * 1.5));
-        const tierScore = m.tier === 'APEX' ? 30 : m.tier === 'Atabey' ? 20 : 10;
-        const totalScore = (m.visitScore || 0) + (m.spendScore || 0) + (m.referralScore || 0) + tenureScore + (m.eventScore || 0) + tierScore;
-        const apexEligible = m.tier === 'APEX' || (m.tier === 'Atabey' && totalScore >= 28);
+        const tenureScore = Math.min(10, Math.floor(monthsAsMember));
+
+        // Cap each category at its defined maximum
+        const visitScore  = Math.min(35, m.visitScore  || 0);
+        const spendScore  = Math.min(25, m.spendScore  || 0);
+        const referralScore = Math.min(20, m.referralScore || 0);
+        const eventScore  = Math.min(10, m.eventScore  || 0);
+
+        // Total is purely behavioral — no tier bonus
+        const totalScore = visitScore + spendScore + referralScore + tenureScore + eventScore;
+
+        // APEX eligibility: Atabey members scoring 70+ qualify; APEX members are already in
+        const apexEligible = m.tier === 'APEX' || (m.tier === 'Atabey' && totalScore >= 70);
+
         await db.update(members)
           .set({ tenureScore, totalScore, apexEligible })
           .where(eq(members.id, m.id));

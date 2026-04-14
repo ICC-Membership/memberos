@@ -4,6 +4,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
+import AdminRoute from "./components/AdminRoute";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
 import ApexPowerRankings from "./pages/ApexPowerRankings";
@@ -35,13 +36,13 @@ function Router() {
         <Route path="/rocks" component={Rocks} />
         <Route path="/meeting-notes" component={MeetingNotes} />
         <Route path="/growth-engine" component={GrowthEngine} />
-        <Route path="/strategy" component={Strategy} />
+        <Route path="/strategy" component={() => <AdminRoute><Strategy /></AdminRoute>} />
         <Route path="/training" component={Training} />
-        <Route path="/commission" component={CommissionTracker} />
+        <Route path="/commission" component={() => <AdminRoute><CommissionTracker /></AdminRoute>} />
         <Route path="/member360" component={Member360} />
         <Route path="/win-back" component={WinBack} />
         <Route path="/apex-review" component={ApexPowerRankings} />
-        <Route path="/lit-ventures" component={LitVentures} />
+        <Route path="/lit-ventures" component={() => <AdminRoute><LitVentures /></AdminRoute>} />
         <Route path="/system-monitor" component={SystemMonitor} />
         <Route component={NotFound} />
       </Switch>

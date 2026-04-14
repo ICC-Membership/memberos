@@ -2,12 +2,12 @@
  * APEX Power Rankings — ICC Membership OS
  * Unified page: member scoring leaderboard + quarterly APEX invitation workflow
  *
- * Algorithm (100 pts max):
- *   Visits    30 pts  — monthly lounge visits (3 pts each, max 10 visits)
- *   Spend     25 pts  — monthly F&B + retail spend ($50 = 1 pt, max 25 pts)
- *   Referrals 20 pts  — active member referrals (5 pts each)
- *   Tenure    15 pts  — membership length (1 pt/month, max 15)
- *   Events    10 pts  — event attendance (2 pts each, max 5 events)
+ * Algorithm (100 pts max — behavior only, no tier bonus):
+ *   Visit Frequency  35 pts  — monthly lounge visits (auto from Lightspeed)
+ *   Spend per Visit  25 pts  — average F&B + retail spend per visit
+ *   Referrals        20 pts  — active member referrals brought in
+ *   Tenure           10 pts  — 1 pt per month as member, capped at 10
+ *   Event Attendance 10 pts  — 2 pts per event attended, max 5 events
  *
  * Threshold: 70+ pts → APEX Lounge invitation eligible
  * Quarterly review: Atabey members are the primary APEX candidates
@@ -49,11 +49,11 @@ function ScoreBar({ value, max, color, label }: { value: number; max: number; co
 
 function AlgorithmCard({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
   const criteria = [
-    { category: "Visits",    max: 30, color: "#8899CC", desc: "Monthly lounge visits — 3 pts each, max 10 visits" },
-    { category: "Spend",     max: 25, color: "#22C55E", desc: "Monthly F&B + retail spend — $50 = 1 pt, max 25 pts" },
-    { category: "Referrals", max: 20, color: "#C4A35A", desc: "Active member referrals — 5 pts each" },
-    { category: "Tenure",    max: 15, color: "#9B7FC7", desc: "Membership length — 1 pt/month, max 15 months" },
-    { category: "Events",    max: 10, color: "#EAB308", desc: "Event attendance — 2 pts each, max 5 events" },
+    { category: "Visit Freq",  max: 35, color: "#8899CC", desc: "Monthly lounge visits — auto from Lightspeed POS" },
+    { category: "Spend/Visit", max: 25, color: "#22C55E", desc: "Average F&B + retail spend per visit" },
+    { category: "Referrals",   max: 20, color: "#C4A35A", desc: "Active member referrals brought in — 5 pts each" },
+    { category: "Tenure",      max: 10, color: "#9B7FC7", desc: "1 pt per month as member, capped at 10" },
+    { category: "Events",      max: 10, color: "#EAB308", desc: "Event attendance — 2 pts each, max 5 events" },
   ];
   return (
     <div className="icc-card" style={{ padding: "1rem 1.25rem" }}>
@@ -356,10 +356,10 @@ export default function ApexPowerRankings() {
                           <tr key={`${m.id}-exp`} style={{ background: "#111", borderBottom: "1px solid #1E1E1E" }}>
                             <td colSpan={10} className="px-6 py-3">
                               <div className="grid grid-cols-5 gap-4">
-                                <ScoreBar value={m.visits} max={30} color="#8899CC" label="VISITS" />
-                                <ScoreBar value={m.spend} max={25} color="#22C55E" label="SPEND" />
+                                <ScoreBar value={m.visits} max={35} color="#8899CC" label="VISIT FREQ" />
+                                <ScoreBar value={m.spend} max={25} color="#22C55E" label="SPEND/VISIT" />
                                 <ScoreBar value={m.referrals} max={20} color="#C4A35A" label="REFERRALS" />
-                                <ScoreBar value={m.tenure} max={15} color="#9B7FC7" label="TENURE" />
+                                <ScoreBar value={m.tenure} max={10} color="#9B7FC7" label="TENURE" />
                                 <ScoreBar value={m.events} max={10} color="#EAB308" label="EVENTS" />
                               </div>
                             </td>

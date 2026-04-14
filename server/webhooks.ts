@@ -53,6 +53,13 @@ async function handleTypeformWebhook(req: Request, res: Response) {
       return res.status(400).json({ error: "Invalid Typeform payload" });
     }
 
+    // Validate form ID if TYPEFORM_FORM_ID is set
+    const configuredFormId = process.env.TYPEFORM_FORM_ID;
+    if (configuredFormId && payload.form_response.form_id !== configuredFormId) {
+      console.warn(`[Typeform Webhook] Rejected: form_id ${payload.form_response.form_id} does not match configured ${configuredFormId}`);
+      return res.status(400).json({ error: "Form ID mismatch" });
+    }
+
     const answers = payload.form_response.answers || [];
     const submittedAt = new Date(payload.form_response.submitted_at);
 
@@ -62,20 +69,27 @@ async function handleTypeformWebhook(req: Request, res: Response) {
     const lastName = extractTypeformField(answers, "last_name") ?? "";
     const email = extractTypeformField(answers, "email");
     const phone = extractTypeformField(answers, "phone");
-    const tierInterest = extractTypeformField(answers, "membership_tier") ?? extractTypeformField(answers, "tier") ?? "Visionary";
+    // Normalize tier value to match the DB enum (Visionary | Atabey | APEX)
+    const rawTier = extractTypeformField(answers, "membership_tier") ?? extractTypeformField(answers, "tier") ?? "Visionary";
+    const tierMap: Record<string, "Visionary" | "Atabey" | "APEX"> = {
+      visionary: "Visionary", atabey: "Atabey", apex: "APEX",
+      "$59": "Visionary", "$125": "Atabey", "$215": "APEX",
+    };
+    const interestedTier: "Visionary" | "Atabey" | "APEX" =
+      tierMap[rawTier.toLowerCase()] ?? (rawTier as any) ?? "Visionary";
     const notes = extractTypeformField(answers, "notes") ?? extractTypeformField(answers, "how_did_you_hear") ?? null;
     const fullName = `${firstName} ${lastName}`.trim();
 
     const db = await getDb();
     if (!db) return res.status(503).json({ error: "DB unavailable" });
 
-    // Insert as a new prospect
+    // Insert as a new prospect (using correct field name: interestedTier, not tierInterest)
     await db.insert(prospects).values({
       name: fullName,
       email: email ?? undefined,
       phone: phone ?? undefined,
       source: "Typeform",
-      tierInterest: tierInterest as any,
+      interestedTier,   // ← correct schema field name
       status: "New",
       notes: notes ?? undefined,
       createdAt: submittedAt,
@@ -84,7 +98,7 @@ async function handleTypeformWebhook(req: Request, res: Response) {
 
     // Queue a follow-up draft for the prospect
     if (email) {
-      const tierLabel = tierInterest === "APEX" ? "APEX Private" : `${tierInterest} Membership`;
+      const tierLabel = interestedTier === "APEX" ? "APEX Private" : `${interestedTier} Membership`;
       await db.insert(emailDraftQueue).values({
         toEmail: email,
         subject: `Your Industrial Cigar Company Membership Inquiry — ${firstName}`,
@@ -107,7 +121,7 @@ Andrew Frakes
 Industrial Cigar Company`,
         type: "prospect_followup",
         memberName: fullName,
-        tier: tierInterest as any,
+        tier: interestedTier,
         status: "pending",
       } as any);
     }
@@ -115,10 +129,10 @@ Industrial Cigar Company`,
     // Notify owner
     await notifyOwner({
       title: `🎯 New Membership Inquiry — ${fullName}`,
-      content: `${fullName} submitted a membership inquiry via Typeform.\n\nTier interest: ${tierInterest}\nEmail: ${email ?? "Not provided"}\nPhone: ${phone ?? "Not provided"}\n${notes ? `Notes: ${notes}` : ""}\n\nAdded to Prospect Pipeline. Follow-up draft queued.`,
+      content: `${fullName} submitted a membership inquiry via Typeform.\n\nTier interest: ${interestedTier}\nEmail: ${email ?? "Not provided"}\nPhone: ${phone ?? "Not provided"}\n${notes ? `Notes: ${notes}` : ""}\n\nAdded to Prospect Pipeline. Follow-up draft queued.`,
     });
 
-    console.log(`[Typeform Webhook] New prospect: ${fullName} (${email}) — ${tierInterest}`);
+    console.log(`[Typeform Webhook] New prospect: ${fullName} (${email}) — ${interestedTier}`);
     return res.json({ success: true, prospect: fullName });
   } catch (err: any) {
     console.error("[Typeform Webhook] Error:", err.message);

@@ -172,11 +172,21 @@ export default function EmailHub() {
 
   // Live draft queue from DB
   const { data: queueStats, refetch: refetchQueue } = trpc.emailAutomation.queueStats.useQuery();
+  const { data: gmailInbox = [], isLoading: inboxLoading } = trpc.emailAutomation.gmailInbox.useQuery(
+    undefined,
+    { enabled: activeTab === "inbox" }
+  );
   const processQueueMutation = trpc.emailAutomation.processQueue.useMutation({
-    onSuccess: () => {
-      toast.success("Queue processing triggered — check Gmail Drafts shortly");
+    onSuccess: (result: any) => {
+      const msg = result.drafted > 0
+        ? `${result.drafted} Gmail draft(s) created — check Gmail Drafts folder`
+        : result.processed === 0
+        ? "No pending drafts in queue"
+        : `Processing complete: ${result.drafted} drafted, ${result.failed} failed`;
+      toast.success(msg);
       refetchQueue();
     },
+    onError: (e: any) => toast.error(`Queue processing failed: ${e.message}`),
   });
 
   const filtered = categoryFilter === "All" ? EMAILS : EMAILS.filter(e => e.category === categoryFilter);
@@ -325,6 +335,32 @@ export default function EmailHub() {
                 <span style={{ fontSize: "0.65rem", background: "rgba(200,16,46,0.1)", color: "#C8102E", padding: "1px 5px", borderRadius: "3px", fontFamily: "monospace" }}>{wh.method}</span>
                 <span style={{ fontSize: "0.75rem", color: "#888" }}>{wh.label}</span>
                 <code style={{ fontSize: "0.7rem", color: "#D4AF37", fontFamily: "monospace" }}>{window.location.origin}{wh.url}</code>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Gmail live inbox — only shown in inbox tab */}
+      {activeTab === "inbox" && gmailInbox.length > 0 && (
+        <div style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: "8px", padding: "12px 16px", marginBottom: "4px" }}>
+          <div style={{ fontSize: "0.7rem", color: "#555", letterSpacing: "0.08em", marginBottom: "8px" }}>LIVE GMAIL — MEMBERSHIP EMAILS (LAST 30 DAYS)</div>
+          <div className="space-y-2">
+            {(gmailInbox as any[]).map((msg: any) => (
+              <div key={msg.id} className="flex items-start justify-between gap-3 p-2 rounded" style={{ background: "#111", border: "1px solid #1a1a1a" }}>
+                <div className="flex-1 min-w-0">
+                  <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#E8E4DC", marginBottom: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.subject}</div>
+                  <div style={{ fontSize: "0.68rem", color: "#6B6560" }}>{msg.from}</div>
+                  <div style={{ fontSize: "0.68rem", color: "#4A4540", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.snippet}</div>
+                </div>
+                <a
+                  href={`https://mail.google.com/mail/u/0/#inbox/${msg.threadId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: "0.65rem", color: "#C8102E", whiteSpace: "nowrap", flexShrink: 0, marginTop: "2px" }}
+                >
+                  Open ↗
+                </a>
               </div>
             ))}
           </div>

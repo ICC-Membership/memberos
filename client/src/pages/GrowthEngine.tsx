@@ -7,9 +7,10 @@
  * - Event Attendee Tracker
  * - Prospect Outreach Generator (AI)
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Zap,
   Users,
@@ -22,6 +23,9 @@ import {
   Star,
   Clock,
   Target,
+  QrCode,
+  Download,
+  Printer,
 } from "lucide-react";
 
 const ICC_RED = "#C8102E";
@@ -118,6 +122,148 @@ Looking forward to another year with you in the family.
 
 — Andrew`,
 };
+
+// ─── Staff QR Code Section ──────────────────────────────────────────────────
+function StaffQRSection() {
+  const { data: staffList = [] } = trpc.staff.list.useQuery();
+  const [selectedStaff, setSelectedStaff] = useState<any | null>(null);
+  const qrRef = useRef<HTMLDivElement>(null);
+
+  const downloadQR = (staff: any) => {
+    const svgEl = qrRef.current?.querySelector("svg");
+    if (!svgEl) return;
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const blob = new Blob([svgData], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ICC-QR-${staff.name.replace(/\s+/g, "-")}.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`QR card downloaded for ${staff.name}`);
+  };
+
+  const printQR = (staff: any) => {
+    const svgEl = qrRef.current?.querySelector("svg");
+    if (!svgEl) return;
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`
+      <html><head><title>ICC QR — ${staff.name}</title>
+      <style>
+        body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #080808; font-family: 'Bebas Neue', sans-serif; }
+        .card { background: #1A1614; border: 2px solid #C8102E; border-radius: 12px; padding: 32px; text-align: center; max-width: 320px; }
+        h1 { color: #C8102E; font-size: 22px; letter-spacing: 0.1em; margin: 0 0 4px; }
+        h2 { color: #F5F0EB; font-size: 18px; letter-spacing: 0.06em; margin: 0 0 20px; }
+        p { color: #C4A35A; font-size: 13px; margin: 16px 0 0; }
+        svg { border-radius: 8px; }
+      </style></head>
+      <body><div class="card">
+        <h1>INDUSTRIAL CIGAR CO.</h1>
+        <h2>MEMBERSHIP INQUIRY</h2>
+        ${svgData}
+        <p>Scan to inquire about membership</p>
+        <p style="font-size:11px;color:#6B6560;margin-top:8px">Referred by ${staff.name}</p>
+      </div></body></html>
+    `);
+    win.document.close();
+    setTimeout(() => win.print(), 500);
+  };
+
+  return (
+    <div className="rounded" style={{ background: SURFACE, border: `1px solid ${BORDER}` }}>
+      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
+        <div className="flex items-center gap-2">
+          <QrCode size={14} style={{ color: ICC_RED }} />
+          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "0.95rem", letterSpacing: "0.06em", color: TEXT }}>
+            STAFF REFERRAL QR CODES
+          </span>
+        </div>
+        <span style={{ fontSize: "0.65rem", color: MUTED }}>Printable / shareable per staff member</span>
+      </div>
+      <div className="p-4">
+        <p style={{ fontSize: "0.75rem", color: TEXT_DIM, marginBottom: "1rem" }}>
+          Each staff member has a unique referral link. Print or share their QR card so prospects can scan to inquire about membership with automatic attribution.
+        </p>
+        {staffList.length === 0 ? (
+          <p style={{ fontSize: "0.75rem", color: MUTED }}>No staff members found. Add staff in the Commission page.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
+              {staffList.map((s: any) => (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedStaff(selectedStaff?.id === s.id ? null : s)}
+                  className="p-3 rounded text-left transition-all"
+                  style={{
+                    background: selectedStaff?.id === s.id ? "rgba(200,16,46,0.12)" : "#161616",
+                    border: `1px solid ${selectedStaff?.id === s.id ? ICC_RED : BORDER}`,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ fontSize: "0.78rem", fontWeight: 600, color: TEXT, marginBottom: "0.25rem" }}>{s.name}</div>
+                  <div style={{ fontSize: "0.65rem", color: MUTED }}>{s.referralCode || "No code"}</div>
+                </button>
+              ))}
+            </div>
+
+            {selectedStaff && selectedStaff.shopifyUrl && (
+              <div className="flex flex-col md:flex-row gap-6 items-start p-4 rounded" style={{ background: "#111", border: `1px solid ${BORDER}` }}>
+                <div ref={qrRef} className="flex-shrink-0">
+                  <QRCodeSVG
+                    value={selectedStaff.shopifyUrl}
+                    size={160}
+                    bgColor="#1A1614"
+                    fgColor="#F5F0EB"
+                    level="H"
+                    includeMargin
+                  />
+                </div>
+                <div className="flex-1">
+                  <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.1rem", letterSpacing: "0.06em", color: TEXT, marginBottom: "0.25rem" }}>
+                    {selectedStaff.name}
+                  </p>
+                  <p style={{ fontSize: "0.7rem", color: MUTED, marginBottom: "0.5rem" }}>Referral Code: <span style={{ color: ICC_RED, fontWeight: 700 }}>{selectedStaff.referralCode}</span></p>
+                  <p style={{ fontSize: "0.68rem", color: TEXT_DIM, marginBottom: "1rem", wordBreak: "break-all" }}>{selectedStaff.shopifyUrl}</p>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold"
+                      style={{ background: "rgba(200,16,46,0.12)", color: ICC_RED, border: `1px solid rgba(200,16,46,0.30)` }}
+                      onClick={() => { navigator.clipboard.writeText(selectedStaff.shopifyUrl); toast.success("Link copied!"); }}
+                    >
+                      <Copy size={11} /> Copy Link
+                    </button>
+                    <button
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold"
+                      style={{ background: "rgba(196,163,90,0.10)", color: "#C4A35A", border: "1px solid rgba(196,163,90,0.25)" }}
+                      onClick={() => downloadQR(selectedStaff)}
+                    >
+                      <Download size={11} /> Download QR
+                    </button>
+                    <button
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold"
+                      style={{ background: "#1E1E1E", color: TEXT, border: `1px solid ${BORDER}` }}
+                      onClick={() => printQR(selectedStaff)}
+                    >
+                      <Printer size={11} /> Print Card
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedStaff && !selectedStaff.shopifyUrl && (
+              <div className="p-3 rounded" style={{ background: "rgba(200,16,46,0.06)", border: "1px solid rgba(200,16,46,0.20)" }}>
+                <p style={{ fontSize: "0.75rem", color: ICC_RED }}>No referral URL set for {selectedStaff.name}. Add a Shopify URL in the Commission page to enable QR generation.</p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function GrowthEngine() {
   const [selectedTemplate, setSelectedTemplate] = useState("New Inquiry");
@@ -361,6 +507,9 @@ export default function GrowthEngine() {
           </div>
         </div>
       </div>
+
+      {/* ── Staff QR Code Cards ─────────────────────────────────────────── */}
+      <StaffQRSection />
 
       {/* Event Attendee Tracker */}
       <div className="rounded" style={{ background: SURFACE, border: `1px solid ${BORDER}` }}>
