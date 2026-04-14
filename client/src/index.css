@@ -339,4 +339,78 @@
   ::-webkit-scrollbar-track { background: #0D0D0D; }
   ::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: #C8102E; }
+
+  /* ─── Mobile Responsive Utilities ─────────────────────────────── */
+
+  /* Scrollable table wrapper — prevents horizontal overflow on mobile */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-scroll table {
+    min-width: 600px;
+  }
+
+  /* Standard page content padding — responsive */
+  .page-content {
+    padding: 1rem;
+  }
+  @media (min-width: 640px) {
+    .page-content { padding: 1.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .page-content { padding: 2rem; }
+  }
+
+  /* Responsive KPI grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  @media (min-width: 640px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (min-width: 1024px) {
+    .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  /* Hide/show on mobile */
+  @media (max-width: 639px) {
+    .hide-mobile { display: none !important; }
+  }
+
+  /* Two-column responsive grid */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  @media (min-width: 768px) {
+    .two-col { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Three-column responsive grid */
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  @media (min-width: 640px) {
+    .three-col { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1024px) {
+    .three-col { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  /* Stack flex rows on mobile */
+  @media (max-width: 639px) {
+    .mobile-stack {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+    }
+    .mobile-full {
+      width: 100% !important;
+    }
+  }
 }

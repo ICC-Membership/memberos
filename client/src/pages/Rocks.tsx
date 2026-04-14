@@ -70,7 +70,7 @@ export default function Rocks() {
   };
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 900, margin: "0 auto" }}>
+    <div style={{ maxWidth: 900, margin: "0 auto" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>

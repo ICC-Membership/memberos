@@ -16,6 +16,7 @@ import {
   getAllEmails, upsertEmail, markEmailRead, saveAiReply,
   getAllProspects, upsertProspect,
 } from "./db";
+import { deals, memberNotes, systemErrors, lockerHistory, lockers as lockersTable } from "../drizzle/schema";
 
 export const appRouter = router({
   system: systemRouter,
@@ -60,6 +61,44 @@ export const appRouter = router({
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(({ input }) => deleteMember(input.id)),
+    bulkQueueEmails: protectedProcedure
+      .input(z.object({
+        memberIds: z.array(z.number()),
+        emailType: z.enum(["payment_reminder", "win_back", "general"]),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        const { emailDraftQueue } = await import("../drizzle/schema");
+        const members = await getAllMembers();
+        const targets = members.filter((m: any) => input.memberIds.includes(m.id));
+        let queued = 0;
+        for (const m of targets) {
+          if (!m.email) continue;
+          const firstName = m.name?.split(" ")[0] || "there";
+          const subject = input.emailType === "payment_reminder"
+            ? `Action Required: Update Your ICC Membership Payment`
+            : input.emailType === "win_back"
+            ? `We Miss You at Industrial Cigar Company`
+            : `A Personal Note from Industrial Cigar Company`;
+          const body = input.emailType === "payment_reminder"
+            ? `Hi ${firstName},\n\nWe noticed your recent payment for your ${m.tier || ""} membership didn't go through. Please update your payment method to keep your locker and all member benefits active.\n\nUpdate here: https://industrialcigars.co/account\n\nBest,\nAndrew\nIndustrial Cigar Company`
+            : input.emailType === "win_back"
+            ? `Hi ${firstName},\n\nIt's been a while since we've seen you at ICC. Your spot is waiting. Come back and we'll make it worth your while.\n\nReactivate: https://industrialcigars.co/pages/membership-at-icc\n\nBest,\nAndrew`
+            : `Hi ${firstName},\n\nJust wanted to reach out personally. Thank you for being a member of Industrial Cigar Company.\n\nBest,\nAndrew`;
+          await db!.insert(emailDraftQueue).values({
+            toEmail: m.email,
+            subject,
+            body,
+            type: input.emailType,
+            memberName: m.name || "",
+            tier: m.tier || "",
+            status: "pending",
+            createdAt: new Date(),
+          });
+          queued++;
+        }
+        return { queued };
+      }),
   }),
 
   rocks: router({
@@ -82,6 +121,25 @@ export const appRouter = router({
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(({ input }) => deleteRock(input.id)),
+    createFromActionItem: protectedProcedure
+      .input(z.object({
+        title: z.string(),
+        description: z.string().optional(),
+        owner: z.string().optional(),
+      }))
+      .mutation(({ input }) => {
+        const now = new Date();
+        const q = Math.ceil((now.getMonth() + 1) / 3);
+        const quarter = `Q${q} ${now.getFullYear()}`;
+        return upsertRock({
+          title: input.title,
+          description: input.description ?? "",
+          owner: input.owner ?? "Andrew",
+          quarter,
+          status: "Not Started",
+          progressPct: 0,
+        } as any);
+      }),
   }),
 
   meetingNotes: router({
@@ -240,6 +298,53 @@ Write a warm, professional reply. Keep it concise and helpful.`,
         lastContactedAt: z.date().optional(),
       }))
       .mutation(({ input }) => upsertProspect(input as any)),
+    advanceStatus: protectedProcedure
+      .input(z.object({ id: z.number(), status: z.enum(["New", "Contacted", "Tour Scheduled", "Proposal Sent", "Closed Won", "Closed Lost"]) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { prospects } = await import('../drizzle/schema');
+        await db.update(prospects).set({ status: input.status, lastContactedAt: new Date() }).where(eq(prospects.id, input.id));
+        return { success: true };
+      }),
+    bookTour: protectedProcedure
+      .input(z.object({ id: z.number(), name: z.string(), email: z.string().optional(), phone: z.string().optional(), tier: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { prospects, emailDraftQueue } = await import('../drizzle/schema');
+        const tierPricing = input.tier === 'APEX' ? '$215/mo' : input.tier === 'Atabey' ? '$125/mo' : '$59/mo';
+        const emailBody = `Hi ${input.name.split(' ')[0]},\n\nThank you for your interest in membership at Industrial Cigar Company!\n\nWe'd love to schedule a private tour of our lounge so you can experience everything we have to offer. Our ${input.tier || 'Visionary'} membership starts at ${tierPricing} and includes exclusive locker access, member events, and more.\n\nPlease reply with your availability or call us to schedule your tour.\n\nLooking forward to meeting you,\nThe ICC Team`;
+        if (input.email) {
+          await db.insert(emailDraftQueue).values({
+            toEmail: input.email, memberName: input.name,
+            subject: `Your Private Tour at Industrial Cigar Company`,
+            body: emailBody, type: 'tour_booking', status: 'pending',
+          });
+        }
+        await db.update(prospects).set({ status: 'Tour Scheduled', lastContactedAt: new Date() }).where(eq(prospects.id, input.id));
+        return { success: true, queued: !!input.email };
+      }),
+    convertToMember: protectedProcedure
+      .input(z.object({ id: z.number(), name: z.string(), email: z.string().optional(), tier: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { prospects, emailDraftQueue } = await import('../drizzle/schema');
+        const tierSlug = input.tier === 'APEX' ? 'apex' : input.tier === 'Atabey' ? 'atabey' : 'visionary';
+        const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN || 'industrialcigars.co';
+        const subscriptionUrl = `https://${shopifyDomain}/pages/membership-at-icc?tier=${tierSlug}&name=${encodeURIComponent(input.name || '')}&email=${encodeURIComponent(input.email || '')}`;
+        if (input.email) {
+          const emailBody = `Hi ${input.name.split(' ')[0]},\n\nWe're excited to welcome you to Industrial Cigar Company!\n\nClick the link below to complete your ${input.tier || 'Visionary'} membership enrollment:\n\n${subscriptionUrl}\n\nIf you have any questions, don't hesitate to reach out.\n\nWelcome to the family,\nThe ICC Team`;
+          await db.insert(emailDraftQueue).values({
+            toEmail: input.email, memberName: input.name,
+            subject: `Welcome to ICC — Complete Your Membership Enrollment`,
+            body: emailBody, type: 'member_conversion', status: 'pending',
+          });
+        }
+        await db.update(prospects).set({ status: 'Closed Won', lastContactedAt: new Date() }).where(eq(prospects.id, input.id));
+        return { success: true, subscriptionUrl, queued: !!input.email };
+      }),
   }),
 
   shopify: router({
@@ -636,11 +741,14 @@ Write a warm, professional reply. Keep it concise and helpful.`,
         memberName: z.string().nullable(),
         tier: z.enum(["Visionary", "Atabey", "APEX"]).nullable(),
         notes: z.string().optional(),
+        performedBy: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error('DB unavailable');
         const { lockers } = await import('../drizzle/schema');
+        // Get current assignment for history
+        const [current] = await db.select().from(lockers).where(eq(lockers.lockerNumber, input.lockerNumber));
         const isAvailable = input.memberId === null;
         await db.update(lockers)
           .set({
@@ -653,7 +761,29 @@ Write a warm, professional reply. Keep it concise and helpful.`,
             updatedAt: new Date(),
           })
           .where(eq(lockers.lockerNumber, input.lockerNumber));
+        // Log to lockerHistory
+        const action = isAvailable ? 'unassigned' : (current?.memberName ? 'moved' : 'assigned');
+        await db.insert(lockerHistory).values({
+          lockerNumber: input.lockerNumber,
+          bank: current?.section ?? null,
+          fromMemberName: current?.memberName ?? null,
+          toMemberName: input.memberName ?? null,
+          action,
+          performedBy: input.performedBy ?? (ctx.user?.name ?? 'Andrew Frakes'),
+          notes: input.notes ?? null,
+          createdAt: new Date(),
+        } as any);
         return { success: true };
+      }),
+    moveHistory: publicProcedure
+      .input(z.object({ lockerNumber: z.string().optional() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        if (input.lockerNumber) {
+          return db.select().from(lockerHistory).where(eq(lockerHistory.lockerNumber, input.lockerNumber)).orderBy(desc(lockerHistory.createdAt)).limit(20);
+        }
+        return db.select().from(lockerHistory).orderBy(desc(lockerHistory.createdAt)).limit(50);
       }),
     seed: protectedProcedure
       .input(z.object({
@@ -721,6 +851,152 @@ Write a warm, professional reply. Keep it concise and helpful.`,
         updated++;
       }
       return { updated };
+    }),
+  }),
+
+  deals: router({
+    list: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      return db.select().from(deals).orderBy(desc(deals.updatedAt));
+    }),
+    get: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      const [deal] = await db.select().from(deals).where(eq(deals.id, input.id));
+      return deal || null;
+    }),
+    upsert: protectedProcedure.input(z.object({
+      id: z.number().optional(),
+      companyName: z.string(),
+      dealType: z.enum(["Equity", "Consulting", "Partnership", "Acquisition", "Advisory"]).default("Equity"),
+      industry: z.string().optional(),
+      stage: z.enum(["Intake", "Diligence", "Term Sheet", "Closed", "Passed"]).default("Intake"),
+      askAmount: z.string().optional(),
+      equityOffered: z.string().optional(),
+      revenue: z.string().optional(),
+      ebitda: z.string().optional(),
+      useOfFunds: z.string().optional(),
+      founderBackground: z.string().optional(),
+      competitiveAdvantage: z.string().optional(),
+      keyRisks: z.string().optional(),
+      exitStrategy: z.string().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      if (input.id) {
+        await db.update(deals).set({ ...input, updatedAt: new Date() } as any).where(eq(deals.id, input.id));
+        return { id: input.id };
+      }
+      const [result] = await db.insert(deals).values(input as any);
+      return { id: (result as any).insertId };
+    }),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      await db.delete(deals).where(eq(deals.id, input.id));
+      return { success: true };
+    }),
+    generateMemo: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      const [deal] = await db.select().from(deals).where(eq(deals.id, input.id));
+      if (!deal) throw new Error("Deal not found");
+      const prompt = `You are a private equity analyst for Lit-Ventures, Andrew Frakes' investment firm. Generate a concise investment memo:\n\nCompany: ${deal.companyName}\nType: ${deal.dealType}\nIndustry: ${deal.industry || "N/A"}\nAsk: ${deal.askAmount || "N/A"}\nEquity: ${deal.equityOffered || "N/A"}\nRevenue: ${deal.revenue || "N/A"}\nEBITDA: ${deal.ebitda || "N/A"}\nUse of Funds: ${deal.useOfFunds || "N/A"}\nFounder: ${deal.founderBackground || "N/A"}\nAdvantage: ${deal.competitiveAdvantage || "N/A"}\nRisks: ${deal.keyRisks || "N/A"}\nExit: ${deal.exitStrategy || "N/A"}\n\nWrite a 300-400 word investment memo with: Executive Summary, Business Overview, Investment Thesis, Key Risks, Recommendation.`;
+      const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
+      const memo = (response.choices[0]?.message?.content as string) || "";
+      await db.update(deals).set({ aiMemo: memo, updatedAt: new Date() } as any).where(eq(deals.id, input.id));
+      return { memo };
+    }),
+    updateStage: protectedProcedure.input(z.object({
+      id: z.number(),
+      stage: z.enum(["Intake", "Diligence", "Term Sheet", "Closed", "Passed"]),
+    })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      await db.update(deals).set({ stage: input.stage, updatedAt: new Date() } as any).where(eq(deals.id, input.id));
+      return { success: true };
+    }),
+  }),
+
+  memberNotes: router({
+    list: publicProcedure.input(z.object({ memberId: z.number() })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      return db.select().from(memberNotes).where(eq(memberNotes.memberId, input.memberId)).orderBy(desc(memberNotes.createdAt));
+    }),
+    add: protectedProcedure.input(z.object({
+      memberId: z.number(),
+      memberName: z.string().optional(),
+      note: z.string(),
+      type: z.enum(["general", "payment", "complaint", "compliment", "winback", "apex"]).default("general"),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      const [result] = await db.insert(memberNotes).values({
+        memberId: input.memberId,
+        memberName: input.memberName,
+        note: input.note,
+        type: input.type,
+        authorName: ctx.user?.name || "Andrew Frakes",
+      } as any);
+      return { id: (result as any).insertId };
+    }),
+    delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      await db.delete(memberNotes).where(eq(memberNotes.id, input.id));
+      return { success: true };
+    }),
+  }),
+
+  lockerHistory: router({
+    list: publicProcedure.input(z.object({ lockerNumber: z.string().optional() })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      if (input.lockerNumber) {
+        return db.select().from(lockerHistory).where(eq(lockerHistory.lockerNumber, input.lockerNumber)).orderBy(desc(lockerHistory.createdAt)).limit(20);
+      }
+      return db.select().from(lockerHistory).orderBy(desc(lockerHistory.createdAt)).limit(50);
+    }),
+  }),
+
+  systemErrors: router({
+    list: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      return db.select().from(systemErrors).orderBy(desc(systemErrors.createdAt)).limit(100);
+    }),
+    log: publicProcedure
+      .input(z.object({
+        service: z.string(),
+        errorType: z.string().optional(),
+        message: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        await db.insert(systemErrors).values({
+          service: input.service,
+          errorType: input.errorType ?? null,
+          message: input.message,
+          resolved: false,
+          createdAt: new Date(),
+        } as any);
+        return { success: true };
+      }),
+    resolve: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      await db.update(systemErrors).set({ resolved: true } as any).where(eq(systemErrors.id, input.id));
+      return { success: true };
+    }),
+    resolveAll: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      await db.update(systemErrors).set({ resolved: true } as any);
+      return { success: true };
     }),
   }),
 

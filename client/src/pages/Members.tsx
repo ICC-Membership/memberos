@@ -1,14 +1,14 @@
 /**
  * Members — ICC Membership OS
  * Live data from Appstle via tRPC — active, paused, cancelled, dunning flags
+ * Bulk actions: select members, queue emails, export CSV
  */
 import { useState } from "react";
-import { Search, ExternalLink, Filter, RefreshCw, CheckCircle, AlertTriangle } from "lucide-react";
+import { Search, ExternalLink, Filter, RefreshCw, CheckCircle, AlertTriangle, Mail, Download, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 const ICC_RED = "#C8102E";
-const SURFACE = "#1C1C1C";
 const BORDER = "#2A2A2A";
 const TEXT = "#E8E4DC";
 const TEXT_DIM = "#6B6560";
@@ -45,18 +45,20 @@ export default function Members() {
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkEmailType, setBulkEmailType] = useState<"payment_reminder" | "win_back" | "general">("payment_reminder");
 
-  // DB members (synced from Appstle)
   const { data: members = [], isLoading, refetch } = trpc.members.list.useQuery();
-  // Live Appstle health stats (always fresh from API)
   const { data: appstleStats } = trpc.shopify.liveStats.useQuery();
 
   const syncMutation = trpc.shopify.syncMembers.useMutation({
-    onSuccess: (data) => {
-      toast.success(`Synced ${data.synced} members from Appstle`);
-      refetch();
-    },
+    onSuccess: (data) => { toast.success(`Synced ${data.synced} members from Appstle`); refetch(); },
     onError: (err) => toast.error(`Sync failed: ${err.message}`),
+  });
+
+  const bulkQueueEmails = trpc.members.bulkQueueEmails.useMutation({
+    onSuccess: (d: any) => { setSelectedIds(new Set()); toast.success(`${d.queued} emails queued to Email Hub`); },
+    onError: () => toast.error("Failed to queue emails"),
   });
 
   const filtered = members.filter((m: any) => {
@@ -70,8 +72,43 @@ export default function Members() {
   const activeCount = members.filter((m: any) => m.status === "Active").length;
   const dunningCount = members.filter((m: any) => m.notes?.includes("dunning")).length;
 
+  const toggleSelect = (id: number) => setSelectedIds(prev => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
+
+  const toggleAll = () => {
+    const allIds = filtered.map((m: any) => m.id);
+    setSelectedIds(prev => prev.size === allIds.length ? new Set() : new Set(allIds));
+  };
+
+  const exportCSV = () => {
+    const rows = filtered.filter((m: any) => selectedIds.size === 0 || selectedIds.has(m.id));
+    const headers = ["Name", "Email", "Tier", "Status", "Monthly Rate", "Joined", "Renewal Date", "Locker"];
+    const csv = [
+      headers.join(","),
+      ...rows.map((m: any) => [
+        m.name, m.email || "", m.tier || "", m.status || "",
+        m.monthlyRate || "", m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : "",
+        m.renewalDate ? new Date(m.renewalDate).toLocaleDateString() : "",
+        m.lockerNumber || ""
+      ].join(","))
+    ].join("\n");
+    const a = document.createElement("a");
+    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    a.download = "icc-members.csv";
+    a.click();
+    toast.success(`Exported ${rows.length} members`);
+  };
+
+  const handleBulkEmail = () => {
+    if (selectedIds.size === 0) { toast.error("Select at least one member"); return; }
+    bulkQueueEmails.mutate({ memberIds: Array.from(selectedIds), emailType: bulkEmailType });
+  };
+
   return (
-    <div className="p-6 space-y-5">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
@@ -93,6 +130,14 @@ export default function Members() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-2"
+            style={{ background: "transparent", color: TEXT_DIM, border: `1px solid ${BORDER}`, fontSize: "0.75rem", fontWeight: 600, padding: "0.5rem 1rem", borderRadius: "0.25rem", cursor: "pointer" }}
+          >
+            <Download size={12} />
+            Export CSV
+          </button>
           <button
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending}
@@ -139,6 +184,44 @@ export default function Members() {
           <span style={{ fontSize: "0.72rem", color: "#EAB308" }}>
             {appstleStats.dunning} member{appstleStats.dunning > 1 ? "s" : ""} in dunning — payment failed, Appstle is retrying. Click "Sync from Appstle" to see who.
           </span>
+        </div>
+      )}
+
+      {/* Bulk Action Toolbar — appears when members are selected */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded" style={{ background: "rgba(200,16,46,0.10)", border: "1px solid rgba(200,16,46,0.30)" }}>
+          <span style={{ fontSize: "0.78rem", color: ICC_RED, fontWeight: 700 }}>{selectedIds.size} selected</span>
+          <div className="flex items-center gap-2 ml-2">
+            <select
+              value={bulkEmailType}
+              onChange={e => setBulkEmailType(e.target.value as any)}
+              style={{ background: "#161616", border: `1px solid ${BORDER}`, color: TEXT, fontSize: "0.72rem", padding: "0.25rem 0.5rem", borderRadius: "0.2rem" }}
+            >
+              <option value="payment_reminder">Payment Reminder</option>
+              <option value="win_back">Win-Back Email</option>
+              <option value="general">General Outreach</option>
+            </select>
+            <button
+              onClick={handleBulkEmail}
+              disabled={bulkQueueEmails.isPending}
+              className="flex items-center gap-1.5"
+              style={{ background: ICC_RED, color: "white", fontSize: "0.72rem", fontWeight: 600, padding: "0.3rem 0.75rem", borderRadius: "0.2rem", border: "none", cursor: "pointer" }}
+            >
+              <Mail size={11} />
+              {bulkQueueEmails.isPending ? "Queuing..." : "Queue Emails"}
+            </button>
+            <button
+              onClick={exportCSV}
+              className="flex items-center gap-1.5"
+              style={{ background: "transparent", color: TEXT_DIM, fontSize: "0.72rem", fontWeight: 600, padding: "0.3rem 0.75rem", borderRadius: "0.2rem", border: `1px solid ${BORDER}`, cursor: "pointer" }}
+            >
+              <Download size={11} />
+              Export Selected
+            </button>
+          </div>
+          <button onClick={() => setSelectedIds(new Set())} style={{ marginLeft: "auto", background: "none", border: "none", color: TEXT_DIM, cursor: "pointer", padding: "0.2rem" }}>
+            <X size={14} />
+          </button>
         </div>
       )}
 
@@ -191,7 +274,7 @@ export default function Members() {
       </div>
 
       {/* Table */}
-      <div className="rounded overflow-hidden" style={{ border: `1px solid ${BORDER}` }}>
+      <div className="rounded overflow-hidden table-scroll" style={{ border: `1px solid ${BORDER}` }}>
         {isLoading ? (
           <div className="flex items-center justify-center py-16" style={{ color: TEXT_DIM }}>
             <RefreshCw size={16} className="animate-spin mr-2" />
@@ -211,6 +294,14 @@ export default function Members() {
           <table className="w-full text-xs">
             <thead>
               <tr style={{ background: "#161616", borderBottom: `1px solid ${BORDER}` }}>
+                <th className="px-4 py-3" style={{ width: 40 }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === filtered.length && filtered.length > 0}
+                    onChange={toggleAll}
+                    style={{ cursor: "pointer", accentColor: ICC_RED }}
+                  />
+                </th>
                 {["Member", "Tier", "Status", "Rate/mo", "Joined", "Next Renewal", "Locker", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3" style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase", color: MUTED }}>
                     {h}
@@ -221,14 +312,23 @@ export default function Members() {
             <tbody>
               {filtered.map((m: any, i: number) => {
                 const isDunning = m.notes?.includes("dunning");
+                const isSelected = selectedIds.has(m.id);
                 return (
                   <tr
                     key={m.id}
                     className="border-b transition-colors"
-                    style={{ borderColor: "#1E1E1E", background: isDunning ? "rgba(234,179,8,0.04)" : i % 2 === 0 ? "#1C1C1C" : "#161616" }}
+                    style={{ borderColor: "#1E1E1E", background: isSelected ? "rgba(200,16,46,0.07)" : isDunning ? "rgba(234,179,8,0.04)" : i % 2 === 0 ? "#1C1C1C" : "#161616" }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = "#222222")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = isDunning ? "rgba(234,179,8,0.04)" : i % 2 === 0 ? "#1C1C1C" : "#161616")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = isSelected ? "rgba(200,16,46,0.07)" : isDunning ? "rgba(234,179,8,0.04)" : i % 2 === 0 ? "#1C1C1C" : "#161616")}
                   >
+                    <td className="px-4 py-3" style={{ width: 40 }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(m.id)}
+                        style={{ cursor: "pointer", accentColor: ICC_RED }}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div

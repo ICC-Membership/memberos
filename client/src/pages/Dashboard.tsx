@@ -2,9 +2,10 @@
  * Dashboard — ICC Membership OS Command Center
  * All KPIs pulled live from Appstle via tRPC — no hardcoded numbers
  */
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Users, TrendingUp, AlertCircle, DollarSign, PauseCircle, AlertTriangle, RefreshCw, Star } from "lucide-react";
+import { useState } from "react";
+import { Users, AlertCircle, DollarSign, PauseCircle, AlertTriangle, RefreshCw, Star, FileDown, Target } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 function TierBadge({ tier }: { tier: string }) {
   if (tier === "APEX") return <span className="tier-badge-apex">{tier}</span>;
@@ -13,10 +14,12 @@ function TierBadge({ tier }: { tier: string }) {
 }
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663388846002/JxsvGXqZ8SL52kxCjJkGqG/icc-hero-bg-JrkCAL8Bfb4U4fT7zNxwBL.webp";
-const Q1_TARGET = 150;
+const Q1_TARGET = 172;
+const AUGUST_TARGET = 200;
 
 export default function Dashboard() {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const [exporting, setExporting] = useState(false);
 
   const { data: appstleStats, isLoading: statsLoading } = trpc.shopify.liveStats.useQuery(
     undefined,
@@ -35,6 +38,16 @@ export default function Dashboard() {
   const atabeyCount = appstleStats?.atabey ?? dashData?.memberStats?.atabey ?? 0;
   const visionaryCount = appstleStats?.visionary ?? dashData?.memberStats?.visionary ?? 0;
   const q1Pct = Math.round((activeCount / Q1_TARGET) * 100);
+  const augustPct = Math.round((activeCount / AUGUST_TARGET) * 100);
+
+  // Projected date to reach 200 members based on current growth rate
+  // Assume ~5 net new members/month (conservative)
+  const NET_MONTHLY_ADDS = 5;
+  const membersNeeded = AUGUST_TARGET - activeCount;
+  const monthsNeeded = membersNeeded > 0 ? Math.ceil(membersNeeded / NET_MONTHLY_ADDS) : 0;
+  const projectedDate = new Date();
+  projectedDate.setMonth(projectedDate.getMonth() + monthsNeeded);
+  const projectedDateStr = projectedDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   const now = new Date();
   const in14Days = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
@@ -53,6 +66,160 @@ export default function Dashboard() {
 
   const rocks = dashData?.rocks ?? [];
 
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = doc.internal.pageSize.getWidth();
+      let y = 15;
+
+      // Header
+      doc.setFillColor(10, 8, 6);
+      doc.rect(0, 0, pageW, 40, "F");
+      doc.setTextColor(200, 16, 46);
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.text("ICC MEMBERSHIP OS", 15, 18);
+      doc.setTextColor(196, 163, 90);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.text("MORNING BRIEFING", 15, 26);
+      doc.setTextColor(160, 152, 144);
+      doc.text(today, 15, 33);
+      y = 50;
+
+      // KPI Section
+      doc.setTextColor(200, 16, 46);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("KEY METRICS", 15, y);
+      y += 6;
+      doc.setDrawColor(200, 16, 46);
+      doc.setLineWidth(0.5);
+      doc.line(15, y, pageW - 15, y);
+      y += 8;
+
+      const kpis = [
+        ["Active Members", String(activeCount), `${q1Pct}% of Q1 target (${Q1_TARGET})`],
+        ["Monthly MRR", `$${mrr.toLocaleString()}`, `~$${Math.round(mrr * 12 / 1000)}k ARR`],
+        ["Paused", String(pausedCount), "Subscriptions on hold"],
+        ["Dunning", String(dunningCount), "Failed payments — action required"],
+      ];
+      kpis.forEach(([label, value, sub]) => {
+        doc.setTextColor(107, 101, 96);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text(label.toUpperCase(), 15, y);
+        doc.setTextColor(232, 228, 220);
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text(value, 15, y + 6);
+        doc.setTextColor(107, 101, 96);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text(sub, 15, y + 12);
+        y += 20;
+      });
+
+      // 200-Member Countdown
+      y += 4;
+      doc.setTextColor(200, 16, 46);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("200-MEMBER COUNTDOWN", 15, y);
+      y += 6;
+      doc.line(15, y, pageW - 15, y);
+      y += 8;
+      doc.setTextColor(232, 228, 220);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Progress: ${activeCount} / ${AUGUST_TARGET} members (${augustPct}%)`, 15, y);
+      y += 7;
+      doc.text(`Members needed: ${Math.max(0, AUGUST_TARGET - activeCount)}`, 15, y);
+      y += 7;
+      doc.setTextColor(196, 163, 90);
+      doc.text(`Projected at current pace: ${projectedDateStr}`, 15, y);
+      y += 14;
+
+      // Tier Breakdown
+      doc.setTextColor(200, 16, 46);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("TIER BREAKDOWN", 15, y);
+      y += 6;
+      doc.line(15, y, pageW - 15, y);
+      y += 8;
+      tierData.forEach(({ tier, count }) => {
+        doc.setTextColor(232, 228, 220);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text(`${tier}: ${count} members`, 15, y);
+        y += 7;
+      });
+      y += 7;
+
+      // Upcoming Renewals
+      if (upcomingRenewals.length > 0) {
+        doc.setTextColor(200, 16, 46);
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text("RENEWALS — NEXT 14 DAYS", 15, y);
+        y += 6;
+        doc.line(15, y, pageW - 15, y);
+        y += 8;
+        upcomingRenewals.forEach((r: any) => {
+          const daysLeft = Math.ceil((new Date(r.renewalDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          doc.setTextColor(232, 228, 220);
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          doc.text(`${r.name} (${r.tier}) — ${new Date(r.renewalDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} — ${daysLeft}d left`, 15, y);
+          y += 7;
+        });
+        y += 7;
+      }
+
+      // Dunning Members
+      if (dunningMembers.length > 0) {
+        doc.setTextColor(234, 179, 8);
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text("PAYMENT ISSUES — ACTION REQUIRED", 15, y);
+        y += 6;
+        doc.setDrawColor(234, 179, 8);
+        doc.line(15, y, pageW - 15, y);
+        doc.setDrawColor(200, 16, 46);
+        y += 8;
+        dunningMembers.forEach((m: any) => {
+          doc.setTextColor(232, 228, 220);
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          doc.text(`${m.name} (${m.tier}) — $${m.monthlyRate?.toFixed(0) ?? "—"}/mo — ${m.email ?? ""}`, 15, y);
+          y += 7;
+        });
+        y += 7;
+      }
+
+      // Footer
+      doc.setFillColor(10, 8, 6);
+      const pageH = doc.internal.pageSize.getHeight();
+      doc.rect(0, pageH - 15, pageW, 15, "F");
+      doc.setTextColor(107, 101, 96);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.text("Industrial Cigar Company — Private Membership OS — Confidential", 15, pageH - 5);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, pageW - 15, pageH - 5, { align: "right" });
+
+      doc.save(`ICC-Morning-Briefing-${new Date().toISOString().split("T")[0]}.pdf`);
+      toast.success("Morning report exported!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to export PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Hero */}
@@ -66,6 +233,14 @@ export default function Dashboard() {
             <div className="flex gap-3 mt-3">
               <a href="/email" style={{ fontSize: "0.72rem", padding: "0.4rem 1rem", borderRadius: "0.25rem", background: "#C8102E", color: "white", fontWeight: 600 }}>Email Hub</a>
               <a href="/members" style={{ fontSize: "0.72rem", padding: "0.4rem 1rem", borderRadius: "0.25rem", background: "transparent", color: "#E8E4DC", border: "1px solid rgba(232,228,220,0.35)", fontWeight: 600 }}>Members</a>
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting}
+                style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", padding: "0.4rem 1rem", borderRadius: "0.25rem", background: "transparent", color: "#C4A35A", border: "1px solid rgba(196,163,90,0.35)", cursor: exporting ? "not-allowed" : "pointer", fontWeight: 600 }}
+              >
+                <FileDown size={12} />
+                {exporting ? "Exporting..." : "Morning Report"}
+              </button>
             </div>
           </div>
           <div className="text-right">
@@ -114,6 +289,51 @@ export default function Dashboard() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* 200-Member Countdown */}
+      <div className="icc-card" style={{ padding: "1.25rem", border: "1px solid rgba(200,16,46,0.20)" }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Target size={14} style={{ color: "#C8102E" }} />
+            <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "0.95rem", letterSpacing: "0.08em", color: "#E8E4DC" }}>200-MEMBER COUNTDOWN</h3>
+          </div>
+          <div className="text-right">
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.6rem", color: "#C8102E", lineHeight: 1 }}>{activeCount}</span>
+            <span style={{ fontSize: "0.75rem", color: "#6B6560" }}> / {AUGUST_TARGET}</span>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="w-full rounded-full overflow-hidden mb-3" style={{ height: "10px", background: "#1E1E1E" }}>
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${Math.min(augustPct, 100)}%`,
+              background: "linear-gradient(90deg, #C8102E 0%, #C4A35A 100%)",
+              transition: "width 0.7s ease"
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex gap-6">
+            <div>
+              <p style={{ fontSize: "0.65rem", color: "#6B6560", textTransform: "uppercase", letterSpacing: "0.1em" }}>Remaining</p>
+              <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.2rem", color: "#C4A35A", lineHeight: 1 }}>{Math.max(0, AUGUST_TARGET - activeCount)}</p>
+            </div>
+            <div>
+              <p style={{ fontSize: "0.65rem", color: "#6B6560", textTransform: "uppercase", letterSpacing: "0.1em" }}>Q1 Target</p>
+              <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.2rem", color: "#8899CC", lineHeight: 1 }}>{Q1_TARGET}</p>
+            </div>
+            <div>
+              <p style={{ fontSize: "0.65rem", color: "#6B6560", textTransform: "uppercase", letterSpacing: "0.1em" }}>August Goal</p>
+              <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.2rem", color: "#22C55E", lineHeight: 1 }}>{AUGUST_TARGET}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p style={{ fontSize: "0.65rem", color: "#6B6560" }}>At current pace (~{NET_MONTHLY_ADDS}/mo)</p>
+            <p style={{ fontSize: "0.78rem", color: "#C4A35A", fontWeight: 600 }}>Projected: {projectedDateStr}</p>
+          </div>
+        </div>
       </div>
 
       {/* Q1 Rocks */}

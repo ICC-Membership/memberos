@@ -211,3 +211,68 @@ export const lockers = mysqlTable("lockers", {
 });
 export type Locker = typeof lockers.$inferSelect;
 export type InsertLocker = typeof lockers.$inferInsert;
+
+// ─── Member Notes (CRM notes per member) ─────────────────────────────────────
+export const memberNotes = mysqlTable("memberNotes", {
+  id: int("id").autoincrement().primaryKey(),
+  memberId: int("memberId").notNull(),
+  memberName: varchar("memberName", { length: 255 }),
+  authorName: varchar("authorName", { length: 255 }).default("Andrew Frakes"),
+  note: text("note").notNull(),
+  type: mysqlEnum("type", ["general", "payment", "complaint", "compliment", "winback", "apex"]).default("general"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type MemberNote = typeof memberNotes.$inferSelect;
+export type InsertMemberNote = typeof memberNotes.$inferInsert;
+
+// ─── Lit-Ventures Deals ───────────────────────────────────────────────────────
+export const deals = mysqlTable("deals", {
+  id: int("id").autoincrement().primaryKey(),
+  companyName: varchar("companyName", { length: 255 }).notNull(),
+  dealType: mysqlEnum("dealType", ["Equity", "Consulting", "Partnership", "Acquisition", "Advisory"]).default("Equity").notNull(),
+  industry: varchar("industry", { length: 128 }),
+  stage: mysqlEnum("stage", ["Intake", "Diligence", "Term Sheet", "Closed", "Passed"]).default("Intake").notNull(),
+  askAmount: varchar("askAmount", { length: 64 }),
+  equityOffered: varchar("equityOffered", { length: 32 }),
+  revenue: varchar("revenue", { length: 64 }),
+  ebitda: varchar("ebitda", { length: 64 }),
+  useOfFunds: text("useOfFunds"),
+  founderBackground: text("founderBackground"),
+  competitiveAdvantage: text("competitiveAdvantage"),
+  keyRisks: text("keyRisks"),
+  exitStrategy: text("exitStrategy"),
+  aiMemo: text("aiMemo"),
+  score: int("score").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Deal = typeof deals.$inferSelect;
+export type InsertDeal = typeof deals.$inferInsert;
+
+// ─── Locker History (audit log for locker reassignments) ─────────────────────
+export const lockerHistory = mysqlTable("lockerHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  lockerNumber: varchar("lockerNumber", { length: 16 }).notNull(),
+  bank: varchar("bank", { length: 32 }), // APEX, Atabey, Visionary
+  fromMemberName: varchar("fromMemberName", { length: 255 }),
+  toMemberName: varchar("toMemberName", { length: 255 }),
+  action: mysqlEnum("action", ["assigned", "unassigned", "moved"]).default("assigned"),
+  performedBy: varchar("performedBy", { length: 255 }).default("Andrew Frakes"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type LockerHistory = typeof lockerHistory.$inferSelect;
+export type InsertLockerHistory = typeof lockerHistory.$inferInsert;
+
+// ─── System Error Log ─────────────────────────────────────────────────────────
+export const systemErrors = mysqlTable("systemErrors", {
+  id: int("id").autoincrement().primaryKey(),
+  service: varchar("service", { length: 64 }).notNull(), // appstle, lightspeed, email_queue, webhook
+  errorType: varchar("errorType", { length: 128 }),
+  message: text("message"),
+  resolved: boolean("resolved").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type SystemError = typeof systemErrors.$inferSelect;
+export type InsertSystemError = typeof systemErrors.$inferInsert;

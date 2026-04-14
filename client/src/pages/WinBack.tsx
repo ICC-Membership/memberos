@@ -140,7 +140,7 @@ export default function WinBack() {
     .reduce((sum: number, c: any) => sum + (c.monthlyRate ?? 0), 0);
 
   return (
-    <div className="p-6 space-y-6" style={{ color: "#E8E4DC" }}>
+    <div className="space-y-6" style={{ color: "#E8E4DC" }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

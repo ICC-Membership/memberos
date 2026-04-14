@@ -81,13 +81,25 @@ export default function LitVentures() {
   const [memo, setMemo] = useState<string>("");
   const [generating, setGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState<"intake" | "pipeline">("intake");
-  const [expandedDeal, setExpandedDeal] = useState<number | null>(null);
+  const [expandedDeal, setExpandedDeal] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const generateMemoMutation = (trpc as any).litVentures?.generateMemo?.useMutation?.({
+  // Live DB deals
+  const { data: liveDeals = [], refetch: refetchDeals } = trpc.deals.list.useQuery();
+  const upsertDeal = trpc.deals.upsert.useMutation({
+    onSuccess: () => { refetchDeals(); toast.success("Deal saved"); },
+  });
+  const deleteDeal = trpc.deals.delete.useMutation({
+    onSuccess: () => { refetchDeals(); toast.success("Deal removed"); },
+  });
+  const updateStage = trpc.deals.updateStage.useMutation({
+    onSuccess: () => refetchDeals(),
+  });
+  const generateMemoMutation = trpc.deals.generateMemo.useMutation({
     onSuccess: (data: any) => {
       setMemo(data?.memo || "");
       setGenerating(false);
+      refetchDeals();
       toast.success("Investment memo generated");
     },
     onError: () => {
@@ -103,18 +115,21 @@ export default function LitVentures() {
     }
     setGenerating(true);
     setMemo("");
-
-    // If the trpc procedure exists, use it; otherwise generate client-side via a direct LLM call
-    if (generateMemoMutation) {
-      generateMemoMutation.mutate(form as any);
+    if (editingId) {
+      generateMemoMutation.mutate({ id: editingId } as any);
     } else {
-      // Fallback: generate memo template locally
-      setTimeout(() => {
+      // Save first then generate
+      const saved = await upsertDeal.mutateAsync({ ...form } as any).catch(() => null);
+      if (saved?.id) {
+        setEditingId(saved.id);
+        generateMemoMutation.mutate({ id: saved.id } as any);
+      } else {
+        // Fallback: generate memo template locally
         const generatedMemo = buildMemoTemplate(form);
         setMemo(generatedMemo);
         setGenerating(false);
         toast.success("Investment memo generated");
-      }, 1200);
+      }
     }
   };
 
@@ -417,7 +432,7 @@ ${f.notes || "—"}
           {/* Stage summary bar */}
           <div className="grid grid-cols-5 gap-0" style={{ borderBottom: `1px solid ${BORDER}` }}>
             {(["Intake", "Diligence", "Term Sheet", "Closed", "Passed"] as DealStage[]).map(stage => {
-              const count = SAMPLE_DEALS.filter(d => d.stage === stage).length;
+              const count = (liveDeals as any[]).filter((d: any) => d.stage === stage).length;
               return (
                 <div key={stage} className="flex flex-col items-center py-3" style={{ borderRight: `1px solid ${BORDER}` }}>
                   <div style={{ fontSize: "1.2rem", fontFamily: "'Bebas Neue', sans-serif", color: STAGE_COLORS[stage] }}>{count}</div>
@@ -429,7 +444,7 @@ ${f.notes || "—"}
 
           {/* Deal list */}
           <div className="divide-y" style={{ borderColor: BORDER }}>
-            {SAMPLE_DEALS.map(deal => (
+            {(liveDeals as any[]).map((deal: any) => (
               <div key={deal.id}>
                 <div
                   className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-[#161616] transition-colors"
@@ -437,25 +452,20 @@ ${f.notes || "—"}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: TEXT }}>{deal.name}</span>
-                      <span style={{ fontSize: "0.6rem", padding: "0.1rem 0.4rem", borderRadius: "3px", background: `${STAGE_COLORS[deal.stage]}20`, color: STAGE_COLORS[deal.stage], fontWeight: 700 }}>
-                        {deal.stage.toUpperCase()}
+                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: TEXT }}>{deal.companyName}</span>
+                      <span style={{ fontSize: "0.6rem", padding: "0.1rem 0.4rem", borderRadius: "3px", background: `${STAGE_COLORS[deal.stage as DealStage] || '#555'}20`, color: STAGE_COLORS[deal.stage as DealStage] || '#aaa', fontWeight: 700 }}>
+                        {deal.stage?.toUpperCase()}
                       </span>
-                      <span style={{ fontSize: "0.6rem", color: TEXT_DIM }}>{deal.type}</span>
+                      <span style={{ fontSize: "0.6rem", color: TEXT_DIM }}>{deal.dealType}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span style={{ fontSize: "0.72rem", color: GOLD }}>{deal.ask}</span>
-                      <span style={{ fontSize: "0.72rem", color: TEXT_DIM }}>{deal.equity} equity</span>
-                      <span style={{ fontSize: "0.72rem", color: TEXT_DIM }}>{deal.industry}</span>
+                      {deal.askAmount && <span style={{ fontSize: "0.72rem", color: GOLD }}>{deal.askAmount}</span>}
+                      {deal.equityOffered && <span style={{ fontSize: "0.72rem", color: TEXT_DIM }}>{deal.equityOffered} equity</span>}
+                      {deal.industry && <span style={{ fontSize: "0.72rem", color: TEXT_DIM }}>{deal.industry}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "1.1rem", fontFamily: "'Bebas Neue', sans-serif", color: deal.score >= 80 ? "#4CAF50" : deal.score >= 60 ? GOLD : ICC_RED }}>
-                        {deal.score}
-                      </div>
-                      <div style={{ fontSize: "0.55rem", color: TEXT_DIM }}>SCORE</div>
-                    </div>
+                    {deal.aiMemo && <CheckCircle size={13} style={{ color: "#4CAF50" }} />}
                     {expandedDeal === deal.id ? <ChevronUp size={14} style={{ color: TEXT_DIM }} /> : <ChevronDown size={14} style={{ color: TEXT_DIM }} />}
                   </div>
                 </div>
@@ -463,9 +473,9 @@ ${f.notes || "—"}
                   <div className="px-4 pb-4" style={{ background: "#161616" }}>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
                       {[
-                        { label: "Ask", value: deal.ask },
-                        { label: "Equity", value: deal.equity },
-                        { label: "Industry", value: deal.industry },
+                        { label: "Ask", value: deal.askAmount || "—" },
+                        { label: "Equity", value: deal.equityOffered || "—" },
+                        { label: "Industry", value: deal.industry || "—" },
                         { label: "Stage", value: deal.stage },
                       ].map(item => (
                         <div key={item.label} style={{ background: SURFACE, borderRadius: "6px", padding: "8px 12px" }}>
@@ -476,16 +486,31 @@ ${f.notes || "—"}
                     </div>
                     <div className="flex gap-2 mt-3">
                       <button
-                        onClick={() => { setActiveTab("intake"); toast.info("Load deal data into intake form"); }}
+                        onClick={() => {
+                          setForm({ companyName: deal.companyName, dealType: deal.dealType || "Equity", industry: deal.industry || "", askAmount: deal.askAmount || "", equityOffered: deal.equityOffered || "", revenue: deal.revenue || "", ebitda: deal.ebitda || "", useOfFunds: deal.useOfFunds || "", founderBackground: deal.founderBackground || "", competitiveAdvantage: deal.competitiveAdvantage || "", keyRisks: deal.keyRisks || "", exitStrategy: deal.exitStrategy || "", notes: deal.notes || "" });
+                          setEditingId(deal.id);
+                          setMemo(deal.aiMemo || "");
+                          setActiveTab("intake");
+                        }}
                         style={{ padding: "0.35rem 0.75rem", fontSize: "0.68rem", background: "rgba(200,16,46,0.12)", color: ICC_RED, border: `1px solid rgba(200,16,46,0.3)`, borderRadius: "4px", cursor: "pointer", fontWeight: 600 }}
                       >
-                        Generate Memo
+                        {deal.aiMemo ? "View / Regen Memo" : "Generate Memo"}
                       </button>
                       <button
-                        onClick={() => toast.info("Move to next stage")}
+                        onClick={() => {
+                          const stages: DealStage[] = ["Intake", "Diligence", "Term Sheet", "Closed", "Passed"];
+                          const idx = stages.indexOf(deal.stage as DealStage);
+                          if (idx < stages.length - 1) { updateStage.mutate({ id: deal.id, stage: stages[idx + 1] }); toast.success(`Moved to ${stages[idx + 1]}`); }
+                        }}
                         style={{ padding: "0.35rem 0.75rem", fontSize: "0.68rem", background: "rgba(196,163,90,0.12)", color: GOLD, border: `1px solid rgba(196,163,90,0.3)`, borderRadius: "4px", cursor: "pointer", fontWeight: 600 }}
                       >
                         Advance Stage
+                      </button>
+                      <button
+                        onClick={() => deleteDeal.mutate({ id: deal.id })}
+                        style={{ padding: "0.35rem 0.75rem", fontSize: "0.68rem", background: "rgba(200,16,46,0.06)", color: "#888", border: `1px solid #333`, borderRadius: "4px", cursor: "pointer", fontWeight: 600 }}
+                      >
+                        Remove
                       </button>
                     </div>
                   </div>
@@ -494,7 +519,7 @@ ${f.notes || "—"}
             ))}
           </div>
 
-          {SAMPLE_DEALS.length === 0 && (
+          {(liveDeals as any[]).length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 gap-3" style={{ color: TEXT_DIM }}>
               <Briefcase size={32} style={{ opacity: 0.3 }} />
               <p style={{ fontSize: "0.78rem" }}>No deals in pipeline yet. Add your first deal above.</p>

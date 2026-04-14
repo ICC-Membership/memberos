@@ -29,6 +29,7 @@ import {
   RotateCcw,
   Crown,
   Briefcase,
+  Shield,
 } from "lucide-react";
 
 const ICC_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663388846002/JxsvGXqZ8SL52kxCjJkGqG/icc-logo_4d91d6f7.png";
@@ -50,6 +51,7 @@ const NAV_ITEMS = [
   { href: "/commission", icon: DollarSign, label: "Commission" },
   { href: "/training", icon: BookOpen, label: "Training" },
   { href: "/lit-ventures", icon: Briefcase, label: "Lit-Ventures" },
+  { href: "/system-monitor", icon: Shield, label: "System Monitor" },
 ];
 
 interface DashboardLayoutProps {
@@ -306,7 +308,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto" style={{ background: "#0D0D0D" }}>
-          {children}
+          <div className="page-content">
+            {children}
+          </div>
         </main>
       </div>
     </div>

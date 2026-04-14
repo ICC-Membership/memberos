@@ -2,7 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import { FileText, Upload, ChevronDown, ChevronUp, AlertCircle, CheckSquare, Sparkles } from "lucide-react";
+import { FileText, Upload, ChevronDown, ChevronUp, AlertCircle, CheckSquare, Sparkles, Target } from "lucide-react";
 
 export default function MeetingNotes() {
   const { isAuthenticated } = useAuth();
@@ -10,6 +10,7 @@ export default function MeetingNotes() {
   const [showUpload, setShowUpload] = useState(false);
   const [uploadForm, setUploadForm] = useState({ title: "", meetingDate: "", rawTranscript: "" });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [creatingRock, setCreatingRock] = useState<string | null>(null);
 
   const { data: notes = [], refetch } = trpc.meetingNotes.list.useQuery();
   const uploadNote = trpc.meetingNotes.upload.useMutation({
@@ -22,6 +23,22 @@ export default function MeetingNotes() {
     },
     onError: () => { setIsAnalyzing(false); toast.error("Failed to analyze notes"); },
   });
+
+  const createRock = trpc.rocks.createFromActionItem.useMutation({
+    onSuccess: () => {
+      setCreatingRock(null);
+      toast.success("Rock created! View it in EOS Rocks.");
+    },
+    onError: () => {
+      setCreatingRock(null);
+      toast.error("Failed to create Rock");
+    },
+  });
+
+  const handleCreateRock = (action: string) => {
+    setCreatingRock(action);
+    createRock.mutate({ title: action, owner: "Andrew" });
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,7 +68,7 @@ export default function MeetingNotes() {
   };
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 900, margin: "0 auto" }}>
+    <div style={{ maxWidth: 900, margin: "0 auto" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -74,7 +91,7 @@ export default function MeetingNotes() {
         <div>
           <p style={{ color: "#F5F0EB", fontSize: "0.85rem", fontWeight: 600, margin: "0 0 0.25rem" }}>How it works</p>
           <p style={{ color: "#6B6560", fontSize: "0.8rem", margin: 0 }}>
-            Export your Monday L10 meeting transcript from Otter.ai as a .txt file, then upload it here. The AI will automatically extract every mention of "membership", "member", or your name — plus all action items assigned to you. No more reading through 2-hour transcripts.
+            Export your Monday L10 meeting transcript from Otter.ai as a .txt file, then upload it here. The AI will automatically extract every mention of "membership", "member", or your name — plus all action items assigned to you. Click <strong style={{ color: "#F5F0EB" }}>→ Create Rock</strong> on any action item to instantly add it as an EOS Rock.
           </p>
         </div>
       </div>
@@ -124,12 +141,34 @@ export default function MeetingNotes() {
                         </p>
                         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                           {actions.map((action: string, i: number) => (
-                            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", padding: "0.6rem 0.75rem", background: "rgba(34,197,94,0.06)", borderRadius: "0.25rem" }}>
-                              <CheckSquare size={14} color="#22c55e" style={{ marginTop: 2, flexShrink: 0 }} />
-                              <span style={{ color: "#F5F0EB", fontSize: "0.85rem" }}>{action}</span>
+                            <div key={i} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem", padding: "0.6rem 0.75rem", background: "rgba(34,197,94,0.06)", borderRadius: "0.25rem" }}>
+                              <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", flex: 1 }}>
+                                <CheckSquare size={14} color="#22c55e" style={{ marginTop: 2, flexShrink: 0 }} />
+                                <span style={{ color: "#F5F0EB", fontSize: "0.85rem" }}>{action}</span>
+                              </div>
+                              {isAuthenticated && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleCreateRock(action); }}
+                                  disabled={creatingRock === action}
+                                  style={{
+                                    display: "flex", alignItems: "center", gap: "0.3rem",
+                                    padding: "0.3rem 0.6rem", borderRadius: "0.2rem",
+                                    background: creatingRock === action ? "rgba(200,16,46,0.1)" : "rgba(200,16,46,0.15)",
+                                    color: "#C8102E", border: "1px solid rgba(200,16,46,0.3)",
+                                    cursor: creatingRock === action ? "not-allowed" : "pointer",
+                                    fontSize: "0.72rem", fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0,
+                                  }}
+                                >
+                                  <Target size={11} />
+                                  {creatingRock === action ? "Creating..." : "→ Rock"}
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
+                        <p style={{ color: "#6B6560", fontSize: "0.72rem", marginTop: "0.5rem" }}>
+                          Click "→ Rock" to add any action item directly to your EOS Rocks tracker.
+                        </p>
                       </div>
                     )}
 

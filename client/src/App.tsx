@@ -21,6 +21,7 @@ import Member360 from "./pages/Member360";
 import WinBack from "./pages/WinBack";
 import ApexReview from "./pages/ApexReview";
 import LitVentures from "./pages/LitVentures";
+import SystemMonitor from "./pages/SystemMonitor";
 
 function Router() {
   return (
@@ -42,6 +43,7 @@ function Router() {
         <Route path="/win-back" component={WinBack} />
         <Route path="/apex-review" component={ApexReview} />
         <Route path="/lit-ventures" component={LitVentures} />
+        <Route path="/system-monitor" component={SystemMonitor} />
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>

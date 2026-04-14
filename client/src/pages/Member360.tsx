@@ -435,7 +435,7 @@ export default function Member360() {
   }
 
   return (
-    <div className="p-6 space-y-5" style={{ color: "#E8E4DC" }}>
+    <div className="space-y-5" style={{ color: "#E8E4DC" }}>
       {/* Header */}
       <div>
         <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2rem", letterSpacing: "0.05em", color: "#E8E4DC", lineHeight: 1 }}>

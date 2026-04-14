@@ -51,7 +51,7 @@
 - [x] Wave 2b: Locker Diagram — wire to real member assignments from DB
 - [x] Wave 11: APEX quarterly review scaffold — auto-rank Atabey by Power Score
 - [x] Wave 12: Win-back draft queue — HIGH priority cancelled members auto-drafted weekly
-- [ ] Wave 15: Lit-Ventures deal intake form + AI deal memo template
+- [x] Wave 15: Lit-Ventures deal intake form + AI deal memo template
 
 ## New Features Requested
 - [x] Member 360 Profile page — full view per member: tier, locker, visit history, spend, scores, notes, payment status
@@ -91,3 +91,37 @@
 - [x] Win-Back Queue — AI Draft button queues personalized re-engagement email via LLM
 - [x] APEX Review — one-click Draft Invite button queuing personalized APEX invitation email
 - [x] Vitest coverage for all new procedures (22 tests passing: scores, win-back, lockers, webhooks, commission)
+
+## Wave 7 — Full Overnight Build (Apr 13-14 night)
+
+### Tier 1 — High Impact
+- [x] n8n workflow JSON exports (morning briefing, Typeform→prospect, payment failure, win-back refresh)
+- [x] Prospect Pipeline — auto-score, Book Tour button, Convert to Member button
+- [x] Member 360 — Send Note button, full payment history, dunning status, APEX eligibility
+- [x] Commission Tracker — live payout calculator with quarterly bonus pool math
+- [x] Locker Diagram — move/reassign flow with timestamp logging
+- [x] Strategy page — 200-member countdown with projected date and weekly net adds trend
+
+### Tier 2 — Operational Depth
+- [ ] Email Hub — real Gmail sync via MCP (last 50 emails from andrew@industrialcigars.com)
+- [x] L10 Notes — auto-create EOS Rocks from AI-parsed action items
+- [x] Lit-Ventures — deal pipeline Kanban board (Intake → Due Diligence → Term Sheet → Closed/Passed)
+- [ ] Growth Engine — referral QR code page per staff member (printable/shareable)
+- [x] Dashboard — Export Morning Report as PDF
+- [x] Members page — bulk actions (select multiple, queue email, pause notice)
+
+### Tier 3 — Polish and Infrastructure
+- [x] Mobile responsiveness audit and fixes across all pages
+- [ ] Role-based access control (admin-only pages: Commission, Lit-Ventures, Strategy)
+- [ ] GitHub export to private repo (requires gh auth login)
+- [x] Error monitoring page (failed syncs, email queue failures, webhook errors)
+
+### Tier 4 — Additional Improvements (discovered during build)
+- [ ] Member notes system — add/edit/view notes on any member from Member 360
+- [ ] Prospect → Member conversion flow — one-click upgrade from Prospect Pipeline
+- [ ] Staff performance dashboard — tours given, conversion rate, commission YTD per staff
+- [ ] Renewal alert system — push notification when member renewal is within 3 days
+- [ ] Locker waitlist — track members waiting for a specific locker section
+- [ ] Member birthday tracker — flag upcoming birthdays on the dashboard
+- [ ] Bottle Concierge row management — separate view for row 6 Atabey assignments
+- [ ] Search across all pages — global search bar for members, prospects, lockers

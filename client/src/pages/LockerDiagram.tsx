@@ -5,8 +5,9 @@
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import { Search, X, Key, Users, Lock, Unlock } from "lucide-react";
+import { Search, X, Key, Users, Lock, Unlock, History, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -316,13 +317,30 @@ function LockerCell({ locker, bank, isSelected, isHighlighted, onClick }: Locker
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function LockerDiagram() {
+  const { isAuthenticated } = useAuth();
   const [activeBank, setActiveBank] = useState<BankKey>("APEX");
   const [selectedLocker, setSelectedLocker] = useState<LockerSeed | null>(null);
   const [search, setSearch] = useState("");
-
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignForm, setAssignForm] = useState({ memberName: "", notes: "", action: "assign" as "assign" | "unassign" });
+  const [showHistory, setShowHistory] = useState(false);
   // Live member list from DB for assignment panel
   const { data: membersRaw } = trpc.members.list.useQuery();
   const members = membersRaw ?? [];
+  // Move history
+  const { data: historyData = [], refetch: refetchHistory } = trpc.lockers.moveHistory.useQuery(
+    { lockerNumber: selectedLocker?.number },
+    { enabled: showHistory && !!selectedLocker }
+  );
+  const assignLocker = trpc.lockers.assign.useMutation({
+    onSuccess: () => {
+      toast.success(assignForm.action === "unassign" ? "Locker unassigned and logged" : "Locker assigned and logged");
+      setShowAssignModal(false);
+      setAssignForm({ memberName: "", notes: "", action: "assign" });
+      refetchHistory();
+    },
+    onError: (e) => toast.error(`Failed: ${e.message}`),
+  });;
 
   const bankLockers: Record<BankKey, LockerSeed[]> = {
     APEX: APEX_LOCKERS,
@@ -356,7 +374,7 @@ export default function LockerDiagram() {
   const cfg = BANK_CONFIG[activeBank];
 
   return (
-    <div style={{ background: "#080808", minHeight: "100vh", padding: "24px", fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ background: "#080808", minHeight: "100vh", fontFamily: "'Inter', sans-serif" }}>
 
       {/* Header */}
       <div style={{ marginBottom: "24px" }}>
@@ -564,53 +582,131 @@ export default function LockerDiagram() {
             <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
               {selectedLocker.isAvailable ? (
                 <button
-                  onClick={() => toast.info("Assignment coming soon — connect to Appstle member sync first")}
-                  style={{
-                    background: cfg.occupiedBg,
-                    border: `1px solid ${cfg.color}55`,
-                    borderRadius: "4px",
-                    padding: "8px",
-                    color: cfg.color,
-                    fontSize: "0.75rem",
-                    cursor: "pointer",
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    letterSpacing: "0.05em",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                  }}
+                  onClick={() => { setAssignForm({ memberName: "", notes: "", action: "assign" }); setShowAssignModal(true); }}
+                  style={{ background: cfg.occupiedBg, border: `1px solid ${cfg.color}55`, borderRadius: "4px", padding: "8px", color: cfg.color, fontSize: "0.75rem", cursor: "pointer", fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.05em", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
                 >
                   <Unlock size={12} />
                   ASSIGN MEMBER
                 </button>
               ) : (
-                <button
-                  onClick={() => toast.info("Unassign coming soon — connect to Appstle member sync first")}
-                  style={{
-                    background: "rgba(200,16,46,0.08)",
-                    border: "1px solid rgba(200,16,46,0.3)",
-                    borderRadius: "4px",
-                    padding: "8px",
-                    color: "#C8102E",
-                    fontSize: "0.75rem",
-                    cursor: "pointer",
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    letterSpacing: "0.05em",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                  }}
-                >
-                  <Lock size={12} />
-                  UNASSIGN
-                </button>
+                <>
+                  <button
+                    onClick={() => { setAssignForm({ memberName: selectedLocker.memberName ?? "", notes: "", action: "assign" }); setShowAssignModal(true); }}
+                    style={{ background: cfg.occupiedBg, border: `1px solid ${cfg.color}55`, borderRadius: "4px", padding: "8px", color: cfg.color, fontSize: "0.75rem", cursor: "pointer", fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.05em", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                  >
+                    <ArrowRight size={12} />
+                    REASSIGN / MOVE
+                  </button>
+                  <button
+                    onClick={() => { setAssignForm({ memberName: "", notes: "", action: "unassign" }); setShowAssignModal(true); }}
+                    style={{ background: "rgba(200,16,46,0.08)", border: "1px solid rgba(200,16,46,0.3)", borderRadius: "4px", padding: "8px", color: "#C8102E", fontSize: "0.75rem", cursor: "pointer", fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.05em", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                  >
+                    <Lock size={12} />
+                    UNASSIGN
+                  </button>
+                </>
               )}
+              <button
+                onClick={() => setShowHistory(h => !h)}
+                style={{ background: "rgba(136,153,204,0.08)", border: "1px solid rgba(136,153,204,0.25)", borderRadius: "4px", padding: "8px", color: "#8899CC", fontSize: "0.75rem", cursor: "pointer", fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.05em", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+              >
+                <History size={12} />
+                {showHistory ? "HIDE HISTORY" : "VIEW HISTORY"}
+              </button>
             </div>
+
+            {/* Move History */}
+            {showHistory && (
+              <div style={{ marginTop: "12px" }}>
+                <div style={{ fontSize: "0.65rem", color: "#444", letterSpacing: "0.08em", marginBottom: "8px" }}>MOVE HISTORY</div>
+                {historyData.length === 0 ? (
+                  <p style={{ fontSize: "0.72rem", color: "#333", textAlign: "center", padding: "12px 0" }}>No history yet</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "200px", overflowY: "auto" }}>
+                    {historyData.map((h: any) => (
+                      <div key={h.id} style={{ background: "#111", borderRadius: "4px", padding: "8px", fontSize: "0.72rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                          <span style={{ color: h.action === "unassigned" ? "#C8102E" : h.action === "moved" ? "#C4A35A" : "#22C55E", fontWeight: 700, textTransform: "uppercase" }}>{h.action}</span>
+                          <span style={{ color: "#333", fontSize: "0.65rem" }}>{new Date(h.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
+                        </div>
+                        {h.fromMemberName && <div style={{ color: "#666" }}>From: {h.fromMemberName}</div>}
+                        {h.toMemberName && <div style={{ color: "#E8E4DC" }}>To: {h.toMemberName}</div>}
+                        {h.performedBy && <div style={{ color: "#444", fontSize: "0.65rem" }}>By: {h.performedBy}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Assign / Reassign Modal */}
+      {showAssignModal && selectedLocker && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#0d0d0d", border: `1px solid ${cfg.color}44`, borderRadius: "8px", padding: "24px", width: "340px", maxWidth: "90vw" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1rem", color: cfg.color, letterSpacing: "0.08em" }}>
+                {assignForm.action === "unassign" ? "UNASSIGN" : selectedLocker.isAvailable ? "ASSIGN" : "REASSIGN"} — LOCKER {selectedLocker.number}
+              </span>
+              <button onClick={() => setShowAssignModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#444" }}><X size={16} /></button>
+            </div>
+            {assignForm.action !== "unassign" && (
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ fontSize: "0.65rem", color: "#444", letterSpacing: "0.08em", display: "block", marginBottom: "6px" }}>MEMBER NAME</label>
+                <input
+                  value={assignForm.memberName}
+                  onChange={e => setAssignForm(f => ({ ...f, memberName: e.target.value }))}
+                  placeholder="e.g. John Smith / Jane Smith"
+                  style={{ width: "100%", background: "#111", border: "1px solid #222", borderRadius: "4px", padding: "8px", color: "#E8E4DC", fontSize: "0.82rem" }}
+                />
+                {members.length > 0 && (
+                  <div style={{ marginTop: "6px", maxHeight: "100px", overflowY: "auto", background: "#0a0a0a", borderRadius: "4px", border: "1px solid #1a1a1a" }}>
+                    {(members as any[]).filter((m: any) => m.name?.toLowerCase().includes(assignForm.memberName.toLowerCase()) && assignForm.memberName.length > 1).slice(0, 5).map((m: any) => (
+                      <div key={m.id} onClick={() => setAssignForm(f => ({ ...f, memberName: m.name }))} style={{ padding: "6px 10px", fontSize: "0.78rem", color: "#aaa", cursor: "pointer" }}>{m.name}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "0.65rem", color: "#444", letterSpacing: "0.08em", display: "block", marginBottom: "6px" }}>NOTES (OPTIONAL)</label>
+              <input
+                value={assignForm.notes}
+                onChange={e => setAssignForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Reason for move, special instructions..."
+                style={{ width: "100%", background: "#111", border: "1px solid #222", borderRadius: "4px", padding: "8px", color: "#E8E4DC", fontSize: "0.82rem" }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => setShowAssignModal(false)}
+                style={{ flex: 1, background: "transparent", border: "1px solid #222", borderRadius: "4px", padding: "10px", color: "#666", fontSize: "0.75rem", cursor: "pointer" }}
+              >CANCEL</button>
+              <button
+                onClick={() => {
+                  if (assignForm.action !== "unassign" && !assignForm.memberName.trim()) {
+                    toast.error("Member name is required");
+                    return;
+                  }
+                  assignLocker.mutate({
+                    lockerNumber: selectedLocker.number,
+                    memberId: assignForm.action === "unassign" ? null : null, // static data, no DB member ID
+                    memberName: assignForm.action === "unassign" ? null : assignForm.memberName.trim(),
+                    tier: (selectedLocker.bank === "APEX" ? "APEX" : selectedLocker.bank === "Atabey" ? "Atabey" : "Visionary") as any,
+                    notes: assignForm.notes || undefined,
+                  });
+                }}
+                disabled={assignLocker.isPending}
+                style={{ flex: 1, background: assignForm.action === "unassign" ? "rgba(200,16,46,0.15)" : cfg.occupiedBg, border: `1px solid ${assignForm.action === "unassign" ? "#C8102E" : cfg.color}55`, borderRadius: "4px", padding: "10px", color: assignForm.action === "unassign" ? "#C8102E" : cfg.color, fontSize: "0.75rem", cursor: "pointer", fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.05em" }}
+              >
+                {assignLocker.isPending ? "SAVING..." : assignForm.action === "unassign" ? "CONFIRM UNASSIGN" : "CONFIRM"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

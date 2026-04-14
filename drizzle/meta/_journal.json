@@ -36,6 +36,13 @@
       "when": 1776096641299,
       "tag": "0004_free_goliath",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1776136313401,
+      "tag": "0005_dear_george_stacy",
+      "breakpoints": true
     }
   ]
 }

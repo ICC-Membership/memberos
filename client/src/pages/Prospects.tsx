@@ -41,6 +41,8 @@ export default function Prospects() {
     { minVisits: 3 },
     { enabled: showLightspeed && !!lsStatus?.connected }
   );
+  const bookTour = trpc.prospects.bookTour.useMutation({ onSuccess: () => { refetch(); toast.success('Tour booked — email draft queued'); } });
+  const convertToMember = trpc.prospects.convertToMember.useMutation({ onSuccess: () => { refetch(); toast.success('Conversion email queued to Email Hub'); } });
   const upsertProspect = trpc.prospects.upsert.useMutation({
     onSuccess: () => { refetch(); setShowForm(false); setForm({ ...defaultForm }); toast.success("Prospect saved"); },
     onError: () => toast.error("Failed to save prospect"),
@@ -65,7 +67,7 @@ export default function Prospects() {
   }, {} as Record<string, number>);
 
   return (
-    <div style={{ padding: "2rem", maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ maxWidth: 1000, margin: "0 auto" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -136,9 +138,17 @@ export default function Prospects() {
                       <span style={{ padding: "0.2rem 0.6rem", borderRadius: "0.2rem", background: cfg.bg, color: cfg.color, fontSize: "0.72rem", fontWeight: 600 }}>{p.status}</span>
                     </td>
                     <td style={{ padding: "0.875rem 1rem" }}>
-                      {isAuthenticated && (
-                        <button onClick={() => openEdit(p)} style={{ background: "none", border: "none", color: "#6B6560", cursor: "pointer", padding: "0.25rem" }}><Edit2 size={14} /></button>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'nowrap' }}>
+                        {isAuthenticated && p.status !== 'Tour Scheduled' && p.status !== 'Closed Won' && (
+                          <button onClick={() => bookTour.mutate({ id: p.id, name: p.name, email: p.email || undefined, phone: p.phone || undefined, tier: p.interestedTier || undefined })} disabled={bookTour.isPending} style={{ padding: '0.2rem 0.45rem', borderRadius: '0.2rem', background: 'rgba(196,163,90,0.15)', color: '#C4A35A', border: '1px solid rgba(196,163,90,0.3)', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Book Tour</button>
+                        )}
+                        {isAuthenticated && p.status !== 'Closed Won' && (
+                          <button onClick={() => convertToMember.mutate({ id: p.id, name: p.name, email: p.email || undefined, tier: p.interestedTier || undefined })} disabled={convertToMember.isPending} style={{ padding: '0.2rem 0.45rem', borderRadius: '0.2rem', background: 'rgba(200,16,46,0.12)', color: '#C8102E', border: '1px solid rgba(200,16,46,0.25)', cursor: 'pointer', fontSize: '0.68rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Convert</button>
+                        )}
+                        {isAuthenticated && (
+                          <button onClick={() => openEdit(p)} style={{ background: 'none', border: 'none', color: '#6B6560', cursor: 'pointer', padding: '0.2rem' }}><Edit2 size={13} /></button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
