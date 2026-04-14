@@ -206,6 +206,10 @@ export const lockers = mysqlTable("lockers", {
   assignedAt: timestamp("assignedAt"),
   notes: text("notes"),
   isAvailable: boolean("isAvailable").default(true).notNull(),
+  keyCode: varchar("keyCode", { length: 64 }),           // physical key number/code
+  nameplateLabel: varchar("nameplateLabel", { length: 255 }), // nameplate display name
+  lockerType: mysqlEnum("lockerType", ["individual", "corporate", "enterprise", "oversized"]).default("individual"),
+  paymentOverdue: boolean("paymentOverdue").default(false), // red highlight flag
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

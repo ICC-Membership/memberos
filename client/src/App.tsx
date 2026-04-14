@@ -6,7 +6,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
-import PowerRankings from "./pages/PowerRankings";
+import ApexPowerRankings from "./pages/ApexPowerRankings";
 import LockerDiagram from "./pages/LockerDiagram";
 import EmailHub from "./pages/EmailHub";
 import Strategy from "./pages/Strategy";
@@ -19,7 +19,6 @@ import NotFound from "./pages/NotFound";
 import CommissionTracker from "./pages/CommissionTracker";
 import Member360 from "./pages/Member360";
 import WinBack from "./pages/WinBack";
-import ApexReview from "./pages/ApexReview";
 import LitVentures from "./pages/LitVentures";
 import SystemMonitor from "./pages/SystemMonitor";
 
@@ -30,7 +29,7 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/members" component={Members} />
         <Route path="/prospects" component={Prospects} />
-        <Route path="/power-rankings" component={PowerRankings} />
+        <Route path="/power-rankings" component={ApexPowerRankings} />
         <Route path="/lockers" component={LockerDiagram} />
         <Route path="/email" component={EmailHub} />
         <Route path="/rocks" component={Rocks} />
@@ -41,7 +40,7 @@ function Router() {
         <Route path="/commission" component={CommissionTracker} />
         <Route path="/member360" component={Member360} />
         <Route path="/win-back" component={WinBack} />
-        <Route path="/apex-review" component={ApexReview} />
+        <Route path="/apex-review" component={ApexPowerRankings} />
         <Route path="/lit-ventures" component={LitVentures} />
         <Route path="/system-monitor" component={SystemMonitor} />
         <Route component={NotFound} />

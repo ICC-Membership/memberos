@@ -775,6 +775,25 @@ Write a warm, professional reply. Keep it concise and helpful.`,
         } as any);
         return { success: true };
       }),
+    updateLocker: protectedProcedure
+      .input(z.object({
+        lockerNumber: z.string(),
+        keyCode: z.string().optional(),
+        nameplateLabel: z.string().optional(),
+        lockerType: z.enum(["individual", "corporate", "enterprise", "oversized"]).optional(),
+        paymentOverdue: z.boolean().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        const { lockers } = await import('../drizzle/schema');
+        const { lockerNumber, ...updates } = input;
+        await db.update(lockers)
+          .set({ ...updates, updatedAt: new Date() } as any)
+          .where(eq(lockers.lockerNumber, lockerNumber));
+        return { success: true };
+      }),
     moveHistory: publicProcedure
       .input(z.object({ lockerNumber: z.string().optional() }))
       .query(async ({ input }) => {

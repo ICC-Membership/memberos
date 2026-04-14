@@ -125,3 +125,14 @@
 - [ ] Member birthday tracker — flag upcoming birthdays on the dashboard
 - [ ] Bottle Concierge row management — separate view for row 6 Atabey assignments
 - [ ] Search across all pages — global search bar for members, prospects, lockers
+
+## User Feedback — Apr 14 (Power Rankings + Locker Diagram Overhaul)
+- [x] Merge Power Rankings + APEX Review into one unified page (remove duplicate nav item)
+- [x] Rebuild APEX locker bank with correct physical layout (4 corner enterprise, top row corporate, Eliot 4x locker, individual)
+- [x] Add nameplate name + key code to every locker cell in all banks
+- [x] Add payment status color coding: available = green highlight, payment overdue = red highlight
+- [x] Enrich locker popup: phone, email, birthdate, key number, notes (Lightspeed notes when connected)
+- [x] Clarify Google Sheet sync process in the UI (explain bidirectional sync status)
+- [x] Make locker diagram bigger and easier to read (larger cells, larger text)
+- [ ] Google Sheet ↔ Locker Diagram two-way auto-sync (requires Google Sheets MCP integration)
+- [ ] Lightspeed → locker popup auto-populate phone/email/birthdate/notes
